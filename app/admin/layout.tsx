@@ -1,35 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Shield,
-  Users,
-  UserPlus,
-  Settings,
-  LayoutDashboard,
-  LogOut,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Shield, Users, LayoutDashboard, LogOut, Home } from "lucide-react";
 import { ReactNode } from "react";
+import { useAuthStore } from "../store/authStore";
+
+// Example: Replace with real auth context/user data
+const loggedUser = "Faisal Nasim Qureshi";
 
 const menuItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
-  // { name: "Groups", href: "/admin/groups", icon: UserPlus },
   { name: "IP Restrictions", href: "/admin/ip-restrictions", icon: Shield },
-  // { name: "Messages Tracker", href: "/admin/messages-tracker", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    // Clear localStorage / cookies if needed
-    // localStorage.removeItem("token");
+  const user = useAuthStore((state) => state.user);
 
-    // Redirect to login
+  console.log("--------- LINE 24 ----------");
+  console.log(user);
+
+  const handleLogout = () => {
     router.push("/login");
   };
 
@@ -42,8 +37,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           Admin Panel
         </div>
 
-        {/* Menu */}
-        <nav className="mt-6 space-y-2 flex-1">
+        {/* Logged-in User */}
+        <div className="px-6 pb-4 text-sm text-white/70 border-b border-white/10">
+          <span className="block font-medium text-white">
+            {user?.name + " ( " + user?.role_name + ")"}
+          </span>
+          {/* <span className="block truncate">{user?.name}</span> */}
+        </div>
+
+        {/* Welcome Page (Primary Gateway Button) */}
+        <div className="px-4 pt-4 pb-3 border-b border-white/10">
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-full 
+                       bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 
+                       text-white font-semibold shadow-md hover:shadow-lg 
+                       hover:from-sky-500 hover:to-indigo-600 transition-all"
+          >
+            <Home className="h-5 w-5" />
+            Welcome Page
+          </Link>
+        </div>
+
+        {/* Main Menu */}
+        <nav className="mt-4 space-y-2 flex-1">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -77,6 +94,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 p-6 bg-gray-50/5 backdrop-blur-sm overflow-y-auto">
+        {/* Top Navbar inside content */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+            Admin Section
+          </h2>
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg 
+                       bg-gray-200 text-gray-800 text-sm font-medium 
+                       hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 
+                       transition"
+          >
+            <Home className="h-4 w-4" />
+            Back to Welcome Page
+          </Link>
+        </div>
+
         {children}
       </main>
     </div>

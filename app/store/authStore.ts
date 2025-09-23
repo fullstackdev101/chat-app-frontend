@@ -5,6 +5,7 @@ import { devtools } from "zustand/middleware";
 interface User {
   id: string;
   username: string;
+  name: string;
   email?: string;
 }
 
