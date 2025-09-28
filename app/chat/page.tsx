@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { socket } from "../../lib/socket";
 import { useRouter } from "next/navigation";
+import { getPreloads } from "@/services/preloadService";
+import { getContacts } from "@/services/preloadService";
 import { User, Group, Message } from "./types";
 import Header from "./components/Header";
 import LeftPanel from "./components/LeftPanel";
@@ -11,7 +13,12 @@ import GroupModal from "./components/GroupModal";
 import { useAuthStore } from "../store/authStore";
 
 export default function ChatPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]); //  Users are users that are connected (accepted requests from user and to user)
+  const [contacts, setContacts] = useState([]); // ONLY for SEARCH.  Contacts are users which are NOT CONNECTED AND have not sent or received a request.
+  const [requestsReceived, setRequestsReceived] = useState([]);
+  const [requestsSent, setRequestsSent] = useState([]);
+  // const [pendingRequests, setPendingRequests] = useState<User[]>([]);
+
   const [groups, setGroups] = useState<Group[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -40,53 +47,42 @@ export default function ChatPage() {
   const selectedUserIdRef = useRef<number | null>(null);
   const selectedGroupIdRef = useRef<number | null>(null);
 
+  // console.log("-------- LINE 45 ---------");
+  // console.log(users);
+  // console.log(pendingRequests);
+
   // ---------------------------
   // Preload (initial snapshot)
-  // ---------------------------
-  useEffect(() => {
-    const fetchPreload = async () => {
-      try {
-        const res = await fetch("http://localhost:4000/api/chat/preload", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const data = await res.json();
-        setUsers(data.users || []);
-        setGroups(data.groups || []);
-        setDirectMessages(data.messages?.direct || {});
-        setGroupMessages(data.messages?.groups || {});
-      } catch (err) {
-        console.error("Failed to preload chat data:", err);
-      }
-    };
-    fetchPreload();
-  }, []);
-
   // ---------------------------
   // Load users & groups, set current user
   // ---------------------------
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const [usersRes, groupsRes] = await Promise.all([
-          fetch("http://localhost:4000/api/chat/users", {
-            headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => r.json()),
-          fetch("http://localhost:4000/api/chat/groups", {
-            headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => r.json()),
-        ]);
+        const { data } = await getPreloads();
+        // console.log("RESPONSE:");
+        // console.log(data.pendingRequestsReceived);
+        // console.log(data.pendingRequestsSent);
 
-        setUsers(usersRes || []);
-        setGroups(groupsRes || []);
+        setUsers(data.users || []);
+        setRequestsReceived(data.pendingRequestsReceived || []);
+        setRequestsSent(data.pendingRequestsSent || []);
+        setGroups(data.groups || []);
+        setDirectMessages(data.messages?.direct || {});
+        setGroupMessages(data.messages?.groups || {});
 
         const savedId = user?.id;
+        console.log("----->" + savedId);
         // store demoUserId so other parts of app can use it
         sessionStorage.setItem("demoUserId", String(savedId));
+        // console.log(data.users);
 
-        const chosen: User | undefined = usersRes.find(
+        const chosen: User | undefined = data.users.find(
           (u: User) => String(u.id) === String(savedId)
         );
+
+        // console.log("----->" + chosen);
+
         if (!chosen) {
           // if user not found, do not set current user (keeps previous behavior)
           console.warn("Chosen user not found from users list:", savedId);
@@ -402,9 +398,79 @@ export default function ChatPage() {
     setShowGroupModal(false);
   };
 
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const { data: allContacts } = await getContacts();
+
+        console.log("----------------- Fetch Contacts -------------------");
+        console.log(allContacts);
+
+        // const allContacts = res.data;
+
+        // Collect all IDs that should be excluded
+        const excludeIds = [
+          ...requestsReceived.map((r) => r.id),
+          ...requestsSent.map((r) => r.id),
+          ...users.map((r) => r.id),
+          // ...accepted.map((a) => a.id),
+          // ...rejected.map((r) => r.id),
+        ];
+
+        // Filter contacts
+        const filteredContacts = allContacts.filter(
+          (c) => !excludeIds.includes(c.id)
+        );
+
+        setContacts(filteredContacts);
+      } catch (err) {
+        console.error("Failed to preload chat data:", err);
+      }
+    };
+    fetchContacts();
+  }, [requestsReceived, requestsSent]);
+
+  // ✅ Accept / Reject / Delete handlers
+  const handleAccept = (id: number) => {
+    console.log("Accepted:", id);
+    // setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+    const accepted = requestsReceived.find((r) => r.id === id);
+    if (!accepted) return;
+    setUsers([...users, accepted]); // move into users list
+    setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
+  };
+
+  const handleReject = (id: number) => {
+    console.log("Rejected:", id);
+    setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // ✅ Delete a sent request → move back to contacts
+  const handleDeleteSent = (id: number) => {
+    const deleted = requestsSent.find((r) => r.id === id);
+    if (deleted) {
+      console.log("Deleted sent request:", deleted.name);
+      setRequestsSent((prev) => prev.filter((r) => r.id !== id));
+      setContacts((prev) => [...prev, deleted]); // 🔥 move back to contacts
+    }
+  };
+
+  // ✅ Send request from contacts → move to requestsSent
+  const handleSendRequest = (id: number) => {
+    const contact = contacts.find((c) => c.id === id);
+    if (contact) {
+      console.log("Sent request to:", contact.name);
+      setRequestsSent((prev) => [...prev, contact]);
+      setContacts((prev) => prev.filter((c) => c.id !== id)); // remove from contacts
+    }
+  };
+
   // render
   if (!currentUser) return <div>Loading...</div>;
 
+  console.log("------------- LINE 540 ------------");
+  console.log(requestsReceived);
+  console.log(requestsSent);
   return (
     <div className="flex h-screen bg-blue-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* LEFT */}
@@ -440,9 +506,13 @@ export default function ChatPage() {
 
       {/* RIGHT */}
       <RightPanel
-        selectedUser={selectedUser}
-        selectedGroup={selectedGroup}
-        users={users}
+        requestsReceived={requestsReceived}
+        requestsSent={requestsSent}
+        contacts={contacts}
+        onAccept={handleAccept}
+        onReject={handleReject}
+        onDeleteSent={handleDeleteSent}
+        onSendRequest={handleSendRequest}
       />
 
       {/* MODAL */}
