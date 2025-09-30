@@ -127,9 +127,21 @@ export default function ChatPanel({
           value={newMessage}
           onChange={(e) => onMessageChange(e.target.value)}
         />
-        <button
+        {/* <button
           type="submit"
           className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+        >
+          Send
+        </button> */}
+
+        <button
+          type="submit"
+          disabled={!selectedUser && !selectedGroup}
+          className={`px-3 py-2 rounded text-white ${
+            !selectedUser && !selectedGroup
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-500 hover:bg-blue-600"
+          }`}
         >
           Send
         </button>

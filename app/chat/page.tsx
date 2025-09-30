@@ -72,10 +72,9 @@ export default function ChatPage() {
         setGroupMessages(data.messages?.groups || {});
 
         const savedId = user?.id;
-        console.log("----->" + savedId);
+        // console.log("----->" + savedId);
         // store demoUserId so other parts of app can use it
         sessionStorage.setItem("demoUserId", String(savedId));
-        // console.log(data.users);
 
         const chosen: User | undefined = data.users.find(
           (u: User) => String(u.id) === String(savedId)
@@ -403,8 +402,8 @@ export default function ChatPage() {
       try {
         const { data: allContacts } = await getContacts();
 
-        console.log("----------------- Fetch Contacts -------------------");
-        console.log(allContacts);
+        // console.log("----------------- Fetch Contacts -------------------");
+        // console.log(allContacts);
 
         // const allContacts = res.data;
 
@@ -430,47 +429,207 @@ export default function ChatPage() {
     fetchContacts();
   }, [requestsReceived, requestsSent]);
 
+  ////////////////////////////////////////////////////////////////////////////
   // ✅ Accept / Reject / Delete handlers
+  // Accept request
   const handleAccept = (id: number) => {
-    console.log("Accepted:", id);
-    // setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
     const accepted = requestsReceived.find((r) => r.id === id);
     if (!accepted) return;
-    setUsers([...users, accepted]); // move into users list
-    setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
+
+    // setUsers([...users, accepted]);
+    // setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
+
+    socket.emit("users_connections:update", {
+      action: "accept",
+      users_connections_id: accepted.users_connections_id,
+      from_user_id: accepted.id, // who sent
+      to_user_id: user.id, // who accepts
+    });
   };
 
+  // Reject request
   const handleReject = (id: number) => {
-    console.log("Rejected:", id);
-    setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+    const rejected = requestsReceived.find((r) => r.id === id);
+    if (!rejected) return;
+
+    // setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+
+    socket.emit("users_connections:update", {
+      action: "reject",
+      users_connections_id: rejected.users_connections_id,
+      from_user_id: rejected.id,
+      to_user_id: user.id,
+    });
   };
 
-  // ✅ Delete a sent request → move back to contacts
+  // Delete sent request → back to contacts
   const handleDeleteSent = (id: number) => {
     const deleted = requestsSent.find((r) => r.id === id);
-    if (deleted) {
-      console.log("Deleted sent request:", deleted.name);
-      setRequestsSent((prev) => prev.filter((r) => r.id !== id));
-      setContacts((prev) => [...prev, deleted]); // 🔥 move back to contacts
-    }
+    if (!deleted) return;
+
+    // setRequestsSent((prev) => prev.filter((r) => r.id !== id));
+    // setContacts((prev) => [...prev, deleted]);
+
+    socket.emit("users_connections:update", {
+      action: "delete",
+      // users_connections_id: deleted.users_connections_id,
+      from_user_id: user.id,
+      to_user_id: deleted.id,
+    });
   };
 
-  // ✅ Send request from contacts → move to requestsSent
+  // Send new request
   const handleSendRequest = (id: number) => {
+    // console.log("---------- LINE  483 -----------");
     const contact = contacts.find((c) => c.id === id);
-    if (contact) {
-      console.log("Sent request to:", contact.name);
-      setRequestsSent((prev) => [...prev, contact]);
-      setContacts((prev) => prev.filter((c) => c.id !== id)); // remove from contacts
-    }
+    // console.log("---------- LINE  484 -----------");
+    // console.log(contact);
+    if (!contact) return;
+
+    // setRequestsSent((prev) => [...prev, contact]);
+    // setContacts((prev) => prev.filter((c) => c.id !== id));
+
+    // // console.log(user?.id, contact.id);
+    // console.log(user, contact);
+
+    socket.emit("users_connections:update", {
+      action: "send",
+      from_user_id: user.id,
+      to_user_id: contact.id,
+    });
   };
 
+  useEffect(() => {
+    // socket.on("users_connections:changed", (data) => {
+    const handleConnectionChange = (data) => {
+      console.log("Realtime update:", data);
+      // console.log("Realtime update:", data);
+
+      // console.log("----------------- USERS LINE 511 -------------------");
+      // console.log(users);
+      // console.log(requestsSent);
+      // console.log(requestsReceived);
+      // console.log(contacts);
+
+      switch (data.action) {
+        case "send":
+          if (data.to_user_id === user.id) {
+            console.log("from_user_id" + data.from_user_id);
+            console.log("to_user_id" + data.to_user_id);
+            console.log(contacts);
+            const contact = contacts.find((c) => c.id === data.from_user_id);
+            console.log(contact);
+            if (contact) {
+              setRequestsReceived((prev) => [...prev, contact]);
+            }
+          } else if (data.from_user_id === user.id) {
+            console.log("from_user_id" + data.from_user_id);
+            console.log("to_user_id" + data.to_user_id);
+            console.log(contacts);
+            const contact = contacts.find((c) => c.id === data.to_user_id);
+            console.log(contact);
+            console.log(requestsSent);
+            if (contact) {
+              setRequestsSent((prev) => [...prev, contact]);
+              // setRequestsSent((prev) => [...prev, contact]);
+              // setContacts((prev) => prev.filter((c) => c.id !== id));
+            }
+          }
+          break;
+        case "accept":
+          console.log("-------- calling from backend --------");
+          if (data.from_user_id === user.id) {
+            console.log("----- LINE 525 -------");
+            // I sent the request and they accepted
+            const contact = requestsSent.find((c) => c.id === data.to_user_id);
+            console.log("from_user_id match:", user.from_user_id, contact);
+            console.log(contacts);
+
+            if (contact) {
+              console.log("----- LINE 535 -------");
+              // setUsers((prev) => [...prev, contact]);
+              setUsers([...users, contact]);
+              // Remove from Received requests
+              // setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
+              setRequestsReceived((prev) =>
+                prev.filter((r) => r.id !== data.to_user_id)
+              );
+              // Remove from sent requests
+              setRequestsSent((prev) =>
+                prev.filter((r) => r.id !== data.to_user_id)
+              );
+            }
+          } else if (data.to_user_id === user.id) {
+            console.log("----- LINE 545 -------");
+            console.log("to_user_id:" + data.to_user_id);
+            // I accepted their request
+            const contact = requestsReceived.find(
+              (c) => c.id === data.from_user_id
+            );
+            console.log("to_user_id match:", data.to_user_id);
+            console.log("contact:" + contact);
+            console.log("contacts:" + contacts);
+            console.log("users:" + users);
+
+            if (contact) {
+              console.log("----- LINE 552 -------");
+              setUsers((prev) => [...prev, contact]);
+              setRequestsReceived((prev) =>
+                prev.filter((r) => r.id !== data.from_user_id)
+              );
+              console.log("requestsReceived:");
+              console.log(requestsReceived);
+              // Remove from sent requests
+              // setRequestsSent((prev) =>
+              //   prev.filter((r) => r.id !== data.to_user_id)
+              // );
+              // console.log("requestsSent:" + requestsSent);
+            }
+
+            // // Remove from received requests
+            // setRequestsReceived((prev) =>
+            //   prev.filter((r) => r.id !== data.from_user_id)
+            // );
+          }
+          break;
+        case "reject":
+          if (data.from_user_id === user.id) {
+            setRequestsSent((prev) =>
+              prev.filter((r) => r.id !== data.to_user_id)
+            );
+          } else if (data.to_user_id === user.id) {
+            setRequestsReceived((prev) =>
+              prev.filter((r) => r.id !== data.from_user_id)
+            );
+          }
+        case "delete":
+          if (data.from_user_id === user.id) {
+            setRequestsSent((prev) =>
+              prev.filter((r) => r.id !== data.to_user_id)
+            );
+          } else if (data.to_user_id === user.id) {
+            setRequestsReceived((prev) =>
+              prev.filter((r) => r.id !== data.from_user_id)
+            );
+          }
+          break;
+      }
+    };
+    // ✅ cleanup: remove listener on unmount/re-render
+
+    socket.on("users_connections:changed", handleConnectionChange);
+
+    return () => {
+      socket.off("users_connections:changed", handleConnectionChange);
+    };
+  }, [contacts]);
+  /////////////////////////////////////////////////////////////////////////////
   // render
   if (!currentUser) return <div>Loading...</div>;
 
-  console.log("------------- LINE 540 ------------");
-  console.log(requestsReceived);
-  console.log(requestsSent);
+  // console.log("------------- LINE 540 ------------");
+  // console.log(requestsReceived);
+  // console.log(requestsSent);
   return (
     <div className="flex h-screen bg-blue-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* LEFT */}

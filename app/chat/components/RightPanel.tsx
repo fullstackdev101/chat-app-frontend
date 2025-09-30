@@ -22,9 +22,9 @@ export default function RightPanel({
   onSendRequest,
 }: RightPanelProps) {
   const [search, setSearch] = useState("");
-  console.log("---------RIGHT PANEL ---------");
-  console.log(search);
-  console.log(contacts);
+  // console.log("---------RIGHT PANEL ---------");
+  // console.log(search);
+  // console.log(contacts);
   // filter contacts only if search is typed
   const filteredContacts =
     search.trim().length > 0
