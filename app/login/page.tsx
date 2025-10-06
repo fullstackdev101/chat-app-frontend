@@ -40,13 +40,21 @@ export default function LoginPage() {
       setTimeout(() => {
         router.push("/");
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login failed:", err);
-      // ✅ show server error message if available
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Invalid credentials, please try again.";
+
+      let message = "Invalid credentials, please try again.";
+
+      if (err && typeof err === "object" && "response" in err) {
+        const axiosErr = err as {
+          response?: { data?: { error?: string; message?: string } };
+        };
+        message =
+          axiosErr.response?.data?.error ||
+          axiosErr.response?.data?.message ||
+          message;
+      }
+
       setError(message);
     } finally {
       setLoading(false);

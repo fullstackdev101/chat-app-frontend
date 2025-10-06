@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from "react";
-import { User, Group, Message } from "../types";
+import { Group, Message } from "../types";
+import { User } from "../../types/user";
 import { Paperclip } from "lucide-react"; // modern clip icon
 
 interface ChatPanelProps {
@@ -27,7 +28,6 @@ export default function ChatPanel({
   onSendDirect,
   onSendGroup,
   onFileChange,
-  onAttachClick,
   onMessageChange,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);

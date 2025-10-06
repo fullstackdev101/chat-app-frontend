@@ -84,12 +84,12 @@ export default function IpRestrictionsPage() {
       console.log(ips);
       console.log(response);
       // Transform response to state object
-      const jsonString = JSON.stringify(response);
+
       setIps((prev) => [...prev, response]);
       setNewIp("");
       setOfficeLocation("");
       setNotes("");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create IP:", err);
       setError("🚫 Failed to save IP." + err);
     }

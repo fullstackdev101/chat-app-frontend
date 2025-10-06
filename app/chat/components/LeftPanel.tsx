@@ -1,5 +1,6 @@
 "use client";
-import { User, Group } from "../types";
+import { Group } from "../types";
+import { User } from "../../types/user";
 
 interface LeftPanelProps {
   users: User[];

@@ -65,7 +65,11 @@ export default function GroupsPage() {
     );
   };
 
-  const handleInputChange = (field: keyof Group, value: any) => {
+  // const handleInputChange = (field: keyof Group, value: any) => {
+  const handleInputChange = <K extends keyof Group>(
+    field: K,
+    value: Group[K]
+  ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -295,7 +299,12 @@ export default function GroupsPage() {
               </select>
               <select
                 value={form.status}
-                onChange={(e) => handleInputChange("status", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange(
+                    "status",
+                    e.target.value as "active" | "inactive"
+                  )
+                }
                 className="p-2 rounded-md bg-white/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
                 <option value="active">Active</option>

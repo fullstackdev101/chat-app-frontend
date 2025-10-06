@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Check, CheckCheck, MoreVertical } from "lucide-react";
+import { FileText, Check, CheckCheck } from "lucide-react";
 
 interface Message {
   id: number;

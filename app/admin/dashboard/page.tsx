@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { getDashboardStats } from "../../../services/dashboardService";
+import { LucideIcon } from "lucide-react";
 
 import {
   Users,
@@ -105,9 +106,14 @@ function ThemeToggle() {
     </button>
   );
 }
-
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: LucideIcon; // 👈 type for lucide-react icons
+  gradient: string;
+}
 // Stat Card
-function StatCard({ title, value, icon: Icon, gradient }: any) {
+function StatCard({ title, value, icon: Icon, gradient }: StatCardProps) {
   return (
     <div
       className={`rounded-2xl p-6 shadow-lg flex items-center justify-between text-white bg-gradient-to-r ${gradient} transition`}

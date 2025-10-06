@@ -3,10 +3,11 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
 interface User {
-  id: string;
+  id: number;
   username: string;
   name: string;
   email?: string;
+  role_name?: string;
 }
 
 interface AuthState {

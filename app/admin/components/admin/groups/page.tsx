@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, UserPlus, Edit3, Trash2 } from "lucide-react";
+import { Plus, Edit3, Trash2 } from "lucide-react";
 
 // Dummy users (from users table)
 const dummyUsers = [

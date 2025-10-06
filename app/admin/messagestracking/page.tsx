@@ -8,10 +8,7 @@ import {
   Search,
   Check,
   X,
-  Users,
-  User,
   MessageSquare,
-  Plus,
   FileText,
 } from "lucide-react";
 

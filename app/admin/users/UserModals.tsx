@@ -39,8 +39,11 @@ export default function UserModals({
     }
   }, [editingUser, modalOpen]);
 
-  const handleInputChange = (field: keyof User, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = <K extends keyof User>(
+    field: K,
+    value: User[K]
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: value } as User));
   };
 
   const validateForm = () => {
@@ -73,12 +76,19 @@ export default function UserModals({
     }
     setError("");
 
+    // 🔧 Clean data to match API types
+    const cleanedForm = {
+      ...form,
+      phone_number: form.phone_number ?? undefined,
+      notes: form.notes ?? undefined,
+    };
+
     try {
       if (editingUser) {
-        await updateUser(editingUser.id, form);
+        await updateUser(editingUser.id, cleanedForm);
       } else {
-        console.log("Creating user with data:", form);
-        await createUser(form);
+        console.log("Creating user with data:", cleanedForm);
+        await createUser(cleanedForm);
       }
       setModalOpen(false);
       setEditingUser(null);
@@ -178,7 +188,7 @@ export default function UserModals({
                 onChange={(e) =>
                   handleInputChange("role_id", Number(e.target.value))
                 }
-                className="p-2 rounded-md bg-white/20 text-white border border-white/20 placeholder-white/50 focus:ring-1 focus:ring-sky-400"
+                className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
                 {USER_ROLES.map((r) => (
                   <option key={r.role_id} value={r.role_id}>
@@ -190,18 +200,26 @@ export default function UserModals({
               <select
                 value={form.account_status}
                 onChange={(e) =>
-                  handleInputChange("account_status", e.target.value)
+                  handleInputChange(
+                    "account_status",
+                    e.target.value as "active" | "inactive" | "blocked"
+                  )
                 }
                 className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="blocked">Blocked</option>
+                <option value="blocked">Blocked</option> {/* 🔧 added */}
               </select>
 
               <select
                 value={form.presence}
-                onChange={(e) => handleInputChange("presence", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange(
+                    "presence",
+                    e.target.value as "online" | "offline" | "busy" | "away" // 🔧 cast
+                  )
+                }
                 className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
                 <option value="online">Online</option>

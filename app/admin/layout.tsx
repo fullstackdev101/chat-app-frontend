@@ -6,9 +6,6 @@ import { Shield, Users, LayoutDashboard, LogOut, Home } from "lucide-react";
 import { ReactNode } from "react";
 import { useAuthStore } from "../store/authStore";
 
-// Example: Replace with real auth context/user data
-const loggedUser = "Faisal Nasim Qureshi";
-
 const menuItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
@@ -19,10 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const user = useAuthStore((state) => state.user);
-
-  console.log("--------- LINE 24 ----------");
-  console.log(user);
+  const user = useAuthStore((state) => state.user);  
 
   const handleLogout = () => {
     router.push("/login");

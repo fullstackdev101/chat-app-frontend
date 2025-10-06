@@ -3,11 +3,34 @@
 
 import { useState, useEffect } from "react";
 
+interface User {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  phone_number?: string;
+  notes?: string;
+  role_id: number;
+  account_status: "active" | "inactive";
+}
+
 interface UserFormProps {
   mode: "add" | "edit";
-  initialData?: any;
+  initialData?: User;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: Omit<User, "id"> & { password: string }) => void;
+}
+
+// Local form state (always safe strings)
+interface FormState {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  role_id: number;
+  phone_number: string;
+  notes: string;
+  account_status: "active" | "inactive";
 }
 
 export default function UserForm({
@@ -16,7 +39,7 @@ export default function UserForm({
   onClose,
   onSave,
 }: UserFormProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     name: "",
     username: "",
     email: "",
@@ -24,12 +47,21 @@ export default function UserForm({
     role_id: 1,
     phone_number: "",
     notes: "",
-    account_status: "",
+    account_status: "inactive",
   });
 
   useEffect(() => {
     if (mode === "edit" && initialData) {
-      setForm({ ...initialData, password: "" }); // password blank in edit
+      setForm({
+        name: initialData.name,
+        username: initialData.username,
+        email: initialData.email,
+        password: "", // blank password in edit
+        role_id: initialData.role_id,
+        phone_number: initialData.phone_number ?? "",
+        notes: initialData.notes ?? "",
+        account_status: initialData.account_status ?? "inactive",
+      });
     }
   }, [mode, initialData]);
 
@@ -40,15 +72,29 @@ export default function UserForm({
   ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
+
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? (checked ? "active" : "inactive") : value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(form);
+
+    // Data matches Omit<User, "id"> + password
+    const payload: Omit<User, "id"> & { password: string } = {
+      name: form.name,
+      username: form.username,
+      email: form.email,
+      password: form.password,
+      role_id: form.role_id,
+      phone_number: form.phone_number,
+      notes: form.notes,
+      account_status: form.account_status,
+    };
+
+    onSave(payload);
     onClose();
   };
 
@@ -149,7 +195,7 @@ export default function UserForm({
             <input
               type="checkbox"
               name="account_status"
-              checked={form.account_status == "active"}
+              checked={form.account_status === "active"}
               onChange={handleChange}
             />
             <label>Active</label>

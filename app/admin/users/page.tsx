@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Eye, Plus, X, ShieldOff } from "lucide-react";
+import { Edit, Trash2, Eye, Plus, ShieldOff } from "lucide-react";
 import { getUsers } from "@/services/authService"; // ✅ import API service
 import { User } from "../../types/user";
+// import { User as ChatUser } from "../../chat/types/index";
 import UserModals from "./UserModals";
 import UserIpModal from "./UserIpModal";
-import { socket } from "../../../lib/socket"; // ✅ import socket instance
+import { getSocket } from "../../../lib/socket"; // ✅ import socket instance
 
 export const defaultUser: User = {
   id: 0,
-  name: "",
+  name: "", // ✅ always string, never undefined
   username: "",
   email: "",
   password: "",
@@ -24,6 +25,7 @@ export const defaultUser: User = {
   profile_image: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  role_name: "", // optional
 };
 
 export default function UsersPage() {
@@ -36,7 +38,6 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState<User>(defaultUser);
 
   // ✅ Fetch users from backend
   useEffect(() => {
@@ -56,8 +57,18 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
     socket.on("user:updated", (updatedUser: User) => {
-      const jsonString = JSON.stringify(updatedUser);
+      // Convert socket user to admin user type by ensuring phone_number is string | null
+      const adminUser: User = {
+        ...updatedUser,
+        phone_number: updatedUser.phone_number ?? null,
+        notes: updatedUser.notes ?? null,
+        created_by: updatedUser.created_by ?? null,
+        profile_image: updatedUser.profile_image ?? null,
+      };
 
       // Function to update single record
       // React style update function
@@ -68,39 +79,22 @@ export default function UsersPage() {
       }
 
       // Example usage in setState
-      setUsers((prev) => updateUserById(prev, updatedUser.id, updatedUser));
+      setUsers((prev) => updateUserById(prev, adminUser.id, adminUser));
     });
 
     socket.on("user:created", (newUser: User) => {
-      const jsonString = JSON.stringify(newUser);
-
-      // 🔄 Transform to desired structure
-      const transformed = JSON.parse(jsonString).map((u: any) => ({
-        id: u.id,
-        name: u.name,
-        username: u.username,
-        email: u.email,
-        password: u.password,
-        role_id: u.role_id,
-        phone_number: u.phone_number,
-        notes: u.notes,
-        created_by: u.created_by,
-        presence: u.presence,
-        last_seen: u.last_seen,
-        account_status: u.account_status,
-        profile_image: u.profile_image,
-        created_at: u.created_at,
-        updated_at: u.updated_at,
-      }));
-
-      setUsers((prev) => [...prev, transformed[0]]);
+      // Convert socket user to admin user type by ensuring phone_number is string | null
+      setUsers((prev) => [...prev, newUser]);
     });
 
     return () => {
-      socket.off("user:created");
-      socket.off("user:updated");
+      const socket = getSocket();
+      if (socket) {
+        socket.off("user:created");
+        socket.off("user:updated");
+      }
     };
-  }, []);
+  }, [users]);
 
   const recordsPerPage = 8;
 
@@ -125,64 +119,70 @@ export default function UsersPage() {
     currentPage * recordsPerPage
   );
 
-  console.log("----- Current Users -----");
-  console.log(currentUsers);
+  // console.log("----- Current Users -----");
+  // console.log(currentUsers);
 
-  const handleInputChange = (field: keyof User, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  // const handleInputChange = (field: keyof User, value: any) => {
+  //   setForm((prev) => ({ ...prev, [field]: value }));
+  // };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.username || !form.email || !form.password) {
-      alert("Name, Username, Email, and Password are required.");
-      return;
-    }
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!form.name || !form.username || !form.email || !form.password) {
+  //     alert("Name, Username, Email, and Password are required.");
+  //     return;
+  //   }
 
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editingUser.id ? { ...u, ...form } : u))
-      );
-    } else {
-      setUsers((prev) => [
-        ...prev,
-        {
-          ...form,
-          id: prev.length + 1,
-          account_status: form.account_status || "active",
-        } as User,
-      ]);
-    }
-    setModalOpen(false);
-    setEditingUser(null);
-    // setForm({});
-  };
+  //   if (editingUser) {
+  //     setUsers((prev) =>
+  //       prev.map((u) => (u.id === editingUser.id ? { ...u, ...form } : u))
+  //     );
+  //   } else {
+  //     setUsers((prev) => [
+  //       ...prev,
+  //       {
+  //         ...form,
+  //         id: prev.length + 1,
+  //         account_status: form.account_status || "active",
+  //       } as User,
+  //     ]);
+  //   }
+  //   setModalOpen(false);
+  //   setEditingUser(null);
+  //   // setForm({});
+  // };
 
-  const toggleStatus = (id: number) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === id
-          ? {
-              ...user,
-              account_status:
-                user.account_status === "active" ? "inactive" : "active",
-            }
-          : user
-      )
-    );
-  };
+  // const toggleStatus = (id: number) => {
+  //   setUsers((prev) =>
+  //     prev.map((user) =>
+  //       user.id === id
+  //         ? {
+  //             ...user,
+  //             account_status:
+  //               user.account_status === "active" ? "inactive" : "active",
+  //           }
+  //         : user
+  //     )
+  //   );
+  // };
 
   const openEditModal = (user: User) => {
-    setEditingUser(user);
-    setForm(user);
+    setEditingUser({
+      ...user,
+      name: user.name ?? "", // ensure string, not null
+    });
+    // setForm(user);
     setModalOpen(true);
   };
 
   const openIpUserModal = (user: User) => {
     console.log("------------ LINE 182 -------------");
 
-    setEditingUser(user);
-    setForm(user);
+    setEditingUser({
+      ...user,
+      name: user.name ?? "", // ensure string, not null
+    });
+    // setForm(user);
     setIpModalOpen(true);
   };
 
@@ -367,8 +367,8 @@ export default function UsersPage() {
         editingUser={editingUser}
         setEditingUser={setEditingUser}
         viewingUser={viewingUser}
-        form={form}
-        handleInputChange={handleInputChange}
+        // form={form}
+        // handleInputChange={handleInputChange}
         // handleSubmit={handleSubmit}
       />
 

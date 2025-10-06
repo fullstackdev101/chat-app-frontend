@@ -1,45 +1,36 @@
 // components/admin/Users.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { ToggleLeft, ToggleRight, Plus, Edit } from "lucide-react";
 import UserForm from "./UserForm";
 
+interface User {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  phone_number?: string;
+  notes?: string;
+  role_id: number;
+  account_status: "active" | "inactive";
+}
+
 export default function Users() {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "Faisal Qureshi",
-      username: "faisal",
-      email: "faisal@example.com",
-      phone_number: "03001234567",
-      notes: "Top performer",
-      role_id: 2,
-      account_status: "active",
-    },
-    {
-      id: 2,
-      name: "Ali Khan",
-      username: "ali",
-      email: "ali@example.com",
-      phone_number: "03331234567",
-      notes: "Intern",
-      role_id: 1,
-      account_status: "inactive",
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [showForm, setShowForm] = useState<null | {
     mode: "add" | "edit";
-    data?: any;
+    data?: User;
   }>(null);
 
-  const handleSave = (data: any) => {
+  // const handleSave = (data: any) => {
+  const handleSave = (data: Omit<User, "id">) => {
     if (showForm?.mode === "add") {
       setUsers((prev) => [...prev, { ...data, id: prev.length + 1 }]);
     } else if (showForm?.mode === "edit" && showForm.data) {
       setUsers((prev) =>
-        prev.map((u) => (u.id === showForm.data.id ? { ...u, ...data } : u))
+        prev.map((u) => (u.id === showForm.data?.id ? { ...u, ...data } : u))
       );
     }
   };

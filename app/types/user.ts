@@ -1,7 +1,8 @@
 // types/user.ts
+
 export interface User {
   id: number;
-  name: string;
+  name: string; // required
   username: string;
   email: string;
   password: string;
@@ -9,13 +10,13 @@ export interface User {
   phone_number: string | null;
   notes: string | null;
   created_by: number | null;
-  presence: "online" | "offline" | "busy" | "away";
-  account_status: "active" | "inactive" | "blocked";
+  presence: "online" | "offline" | "away" | "busy";
+  account_status: "active" | "inactive" | "blocked"; // 🔧 add blocked
   last_seen: string;
   profile_image: string | null;
   created_at: string;
   updated_at: string;
-  role_name?: string; // Optional role name field
+  role_name?: string;
 }
 
 // Default user object

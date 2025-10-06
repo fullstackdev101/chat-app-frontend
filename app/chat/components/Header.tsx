@@ -1,6 +1,6 @@
 "use client";
 import { LogOut } from "lucide-react";
-import { User } from "../types";
+import { User } from "../../types/user";
 
 interface HeaderProps {
   currentUser: User;

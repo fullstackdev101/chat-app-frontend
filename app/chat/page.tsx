@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { socket } from "../../lib/socket";
+import { getSocket } from "../../lib/socket";
+import { Socket as SocketClient } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { getPreloads } from "@/services/preloadService";
 import { getContacts } from "@/services/preloadService";
-import { User, Group, Message } from "./types";
+import { Group, Message } from "./types";
+import { User } from "../types/user";
 import Header from "./components/Header";
 import LeftPanel from "./components/LeftPanel";
 import ChatPanel from "./components/ChatPanel";
@@ -14,9 +16,11 @@ import { useAuthStore } from "../store/authStore";
 
 export default function ChatPage() {
   const [users, setUsers] = useState<User[]>([]); //  Users are users that are connected (accepted requests from user and to user)
-  const [contacts, setContacts] = useState([]); // ONLY for SEARCH.  Contacts are users which are NOT CONNECTED AND have not sent or received a request.
-  const [requestsReceived, setRequestsReceived] = useState([]);
-  const [requestsSent, setRequestsSent] = useState([]);
+
+  // <-- FIXED: explicitly type these as User[] so TS knows .map(r => r.id) is valid
+  const [contacts, setContacts] = useState<User[]>([]); // ONLY for SEARCH.  Contacts are users which are NOT CONNECTED AND have not sent or received a request.
+  const [requestsReceived, setRequestsReceived] = useState<User[]>([]);
+  const [requestsSent, setRequestsSent] = useState<User[]>([]);
   // const [pendingRequests, setPendingRequests] = useState<User[]>([]);
 
   const [groups, setGroups] = useState<Group[]>([]);
@@ -39,7 +43,7 @@ export default function ChatPage() {
 
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
-  const socketRef = useRef<typeof socket | null>(null);
+  const socketRef = useRef<SocketClient | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // refs used for comparing in listeners
@@ -99,7 +103,7 @@ export default function ChatPage() {
     fetchData();
     // NOTE: we intentionally run this once; `user` from authStore is read initially.
     // If you expect `user` to change and want to react, add [user] here.
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     currentUserIdRef.current = currentUser?.id ?? null;
@@ -117,6 +121,9 @@ export default function ChatPage() {
   // Socket listeners
   // ---------------------------
   useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
     socketRef.current = socket;
 
     const handleConnect = () => {
@@ -144,16 +151,18 @@ export default function ChatPage() {
       // console.log("📩 Incoming message (handleMessage):", msg);
 
       // If group message
-      if (msg.group_id) {
+      if (msg.group_id !== undefined && msg.group_id !== null) {
+        const groupId = msg.group_id as number; // ✅ ensure TS knows it's a number
+
         setGroupMessages((prev) => {
-          const arr = prev[msg.group_id] ? [...prev[msg.group_id]] : [];
+          const arr = prev[groupId] ? [...prev[groupId]] : [];
           // avoid duplicates by id
           if (!arr.some((m) => m.id === msg.id)) arr.push(msg);
-          return { ...prev, [msg.group_id]: arr };
+          return { ...prev, [groupId]: arr };
         });
 
         // show in open group chat if active
-        if (selectedGroupIdRef.current === msg.group_id) {
+        if (selectedGroupIdRef.current === groupId) {
           setMessages((prev) => {
             if (!prev.some((m) => m.id === msg.id)) return [...prev, msg];
             return prev;
@@ -162,7 +171,7 @@ export default function ChatPage() {
 
         // mark unread for others
         if (msg.from_user !== currentUserIdRef.current) {
-          setUnread((prev) => ({ ...prev, [`group-${msg.group_id}`]: true }));
+          setUnread((prev) => ({ ...prev, [`group-${groupId}`]: true }));
         }
         return;
       }
@@ -211,8 +220,6 @@ export default function ChatPage() {
     socket.on("groupCreated", handleGroupCreated);
 
     socket.on("user:updated", (updatedUser: User) => {
-      const jsonString = JSON.stringify(updatedUser);
-
       // Function to update single record
       // React style update function
       function updateUserById(users: User[], id: number, userData: User) {
@@ -229,7 +236,7 @@ export default function ChatPage() {
       const jsonString = JSON.stringify(newUser);
 
       // 🔄 Transform to desired structure
-      const transformed = JSON.parse(jsonString).map((u: any) => ({
+      const transformed = (JSON.parse(jsonString) as User[]).map((u) => ({
         id: u.id,
         name: u.name,
         username: u.username,
@@ -251,11 +258,14 @@ export default function ChatPage() {
     });
 
     return () => {
-      socket.off("connect", handleConnect);
-      socket.off("message", handleMessage);
-      socket.off("groupCreated", handleGroupCreated);
-      socket.off("user:created");
-      socket.off("user:updated");
+      const socket = getSocket();
+      if (socket) {
+        socket.off("connect", handleConnect);
+        socket.off("message", handleMessage);
+        socket.off("groupCreated", handleGroupCreated);
+        socket.off("user:created");
+        socket.off("user:updated");
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
@@ -396,38 +406,26 @@ export default function ChatPage() {
     setGroupMembers([]);
     setShowGroupModal(false);
   };
-
   useEffect(() => {
     const fetchContacts = async () => {
       try {
         const { data: allContacts } = await getContacts();
 
-        // console.log("----------------- Fetch Contacts -------------------");
-        // console.log(allContacts);
+        setContacts(() => {
+          const excludeIds = [
+            ...requestsReceived.map((r) => r.id),
+            ...requestsSent.map((r) => r.id),
+            ...users.map((r) => r.id),
+          ];
 
-        // const allContacts = res.data;
-
-        // Collect all IDs that should be excluded
-        const excludeIds = [
-          ...requestsReceived.map((r) => r.id),
-          ...requestsSent.map((r) => r.id),
-          ...users.map((r) => r.id),
-          // ...accepted.map((a) => a.id),
-          // ...rejected.map((r) => r.id),
-        ];
-
-        // Filter contacts
-        const filteredContacts = allContacts.filter(
-          (c) => !excludeIds.includes(c.id)
-        );
-
-        setContacts(filteredContacts);
+          return allContacts.filter((c: User) => !excludeIds.includes(c.id));
+        });
       } catch (err) {
         console.error("Failed to preload chat data:", err);
       }
     };
     fetchContacts();
-  }, [requestsReceived, requestsSent]);
+  }, [requestsReceived, requestsSent, users]); // ✅ safe to leave empty now
 
   ////////////////////////////////////////////////////////////////////////////
   // ✅ Accept / Reject / Delete handlers
@@ -438,13 +436,16 @@ export default function ChatPage() {
 
     // setUsers([...users, accepted]);
     // setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
+    if (!user) return; // exit if not logged in
 
-    socket.emit("users_connections:update", {
-      action: "accept",
-      users_connections_id: accepted.users_connections_id,
-      from_user_id: accepted.id, // who sent
-      to_user_id: user.id, // who accepts
-    });
+    const socket = getSocket();
+    if (socket) {
+      socket.emit("users_connections:update", {
+        action: "accept",
+        from_user_id: accepted.id, // who sent
+        to_user_id: user.id, // who accepts
+      });
+    }
   };
 
   // Reject request
@@ -453,13 +454,16 @@ export default function ChatPage() {
     if (!rejected) return;
 
     // setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+    if (!user) return; // exit if not logged in
 
-    socket.emit("users_connections:update", {
-      action: "reject",
-      users_connections_id: rejected.users_connections_id,
-      from_user_id: rejected.id,
-      to_user_id: user.id,
-    });
+    const socket = getSocket();
+    if (socket) {
+      socket.emit("users_connections:update", {
+        action: "reject",
+        from_user_id: rejected.id,
+        to_user_id: user.id,
+      });
+    }
   };
 
   // Delete sent request → back to contacts
@@ -469,13 +473,17 @@ export default function ChatPage() {
 
     // setRequestsSent((prev) => prev.filter((r) => r.id !== id));
     // setContacts((prev) => [...prev, deleted]);
+    if (!user) return; // exit if not logged in
 
-    socket.emit("users_connections:update", {
-      action: "delete",
-      // users_connections_id: deleted.users_connections_id,
-      from_user_id: user.id,
-      to_user_id: deleted.id,
-    });
+    const socket = getSocket();
+    if (socket) {
+      socket.emit("users_connections:update", {
+        action: "delete",
+        // users_connections_id: deleted.users_connections_id,
+        from_user_id: user.id,
+        to_user_id: deleted.id,
+      });
+    }
   };
 
   // Send new request
@@ -491,123 +499,88 @@ export default function ChatPage() {
 
     // // console.log(user?.id, contact.id);
     // console.log(user, contact);
+    if (!user) return; // exit if not logged in
 
-    socket.emit("users_connections:update", {
-      action: "send",
-      from_user_id: user.id,
-      to_user_id: contact.id,
-    });
+    const socket = getSocket();
+    if (socket) {
+      socket.emit("users_connections:update", {
+        action: "send",
+        from_user_id: user.id,
+        to_user_id: contact.id,
+      });
+    }
   };
 
-  useEffect(() => {
-    // socket.on("users_connections:changed", (data) => {
-    const handleConnectionChange = (data) => {
-      console.log("Realtime update:", data);
-      // console.log("Realtime update:", data);
+  interface ConnectionEvent {
+    action: "accept" | "reject" | "delete" | "send";
+    from_user_id: number;
+    to_user_id: number;
+  }
 
-      // console.log("----------------- USERS LINE 511 -------------------");
-      // console.log(users);
-      // console.log(requestsSent);
-      // console.log(requestsReceived);
-      // console.log(contacts);
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleConnectionChange = (data: ConnectionEvent) => {
+      console.log("Realtime update:", data);
 
       switch (data.action) {
         case "send":
-          if (data.to_user_id === user.id) {
-            console.log("from_user_id" + data.from_user_id);
-            console.log("to_user_id" + data.to_user_id);
-            console.log(contacts);
+          if (user && data.to_user_id === user.id) {
             const contact = contacts.find((c) => c.id === data.from_user_id);
-            console.log(contact);
             if (contact) {
               setRequestsReceived((prev) => [...prev, contact]);
             }
-          } else if (data.from_user_id === user.id) {
-            console.log("from_user_id" + data.from_user_id);
-            console.log("to_user_id" + data.to_user_id);
-            console.log(contacts);
+          } else if (user && data.from_user_id === user.id) {
             const contact = contacts.find((c) => c.id === data.to_user_id);
-            console.log(contact);
-            console.log(requestsSent);
             if (contact) {
               setRequestsSent((prev) => [...prev, contact]);
-              // setRequestsSent((prev) => [...prev, contact]);
-              // setContacts((prev) => prev.filter((c) => c.id !== id));
             }
           }
           break;
-        case "accept":
-          console.log("-------- calling from backend --------");
-          if (data.from_user_id === user.id) {
-            console.log("----- LINE 525 -------");
-            // I sent the request and they accepted
-            const contact = requestsSent.find((c) => c.id === data.to_user_id);
-            console.log("from_user_id match:", user.from_user_id, contact);
-            console.log(contacts);
 
+        case "accept":
+          if (user && data.from_user_id === user.id) {
+            // I sent the request, they accepted
+            const contact = requestsSent.find((c) => c.id === data.to_user_id);
             if (contact) {
-              console.log("----- LINE 535 -------");
-              // setUsers((prev) => [...prev, contact]);
-              setUsers([...users, contact]);
-              // Remove from Received requests
-              // setRequestsReceived(requestsReceived.filter((r) => r.id !== id));
-              setRequestsReceived((prev) =>
-                prev.filter((r) => r.id !== data.to_user_id)
-              );
-              // Remove from sent requests
+              setUsers((prev) => [...prev, contact]);
               setRequestsSent((prev) =>
                 prev.filter((r) => r.id !== data.to_user_id)
               );
             }
-          } else if (data.to_user_id === user.id) {
-            console.log("----- LINE 545 -------");
-            console.log("to_user_id:" + data.to_user_id);
+          } else if (user && data.to_user_id === user.id) {
             // I accepted their request
             const contact = requestsReceived.find(
               (c) => c.id === data.from_user_id
             );
-            console.log("to_user_id match:", data.to_user_id);
-            console.log("contact:" + contact);
-            console.log("contacts:" + contacts);
-            console.log("users:" + users);
-
             if (contact) {
-              console.log("----- LINE 552 -------");
               setUsers((prev) => [...prev, contact]);
               setRequestsReceived((prev) =>
                 prev.filter((r) => r.id !== data.from_user_id)
               );
-              console.log("requestsReceived:");
-              console.log(requestsReceived);
-              // Remove from sent requests
-              // setRequestsSent((prev) =>
-              //   prev.filter((r) => r.id !== data.to_user_id)
-              // );
-              // console.log("requestsSent:" + requestsSent);
             }
-
-            // // Remove from received requests
-            // setRequestsReceived((prev) =>
-            //   prev.filter((r) => r.id !== data.from_user_id)
-            // );
           }
           break;
+
         case "reject":
-          if (data.from_user_id === user.id) {
+          if (user && data.from_user_id === user.id) {
             setRequestsSent((prev) =>
               prev.filter((r) => r.id !== data.to_user_id)
             );
-          } else if (data.to_user_id === user.id) {
+          } else if (user && data.to_user_id === user.id) {
             setRequestsReceived((prev) =>
               prev.filter((r) => r.id !== data.from_user_id)
             );
           }
+          break;
+
         case "delete":
-          if (data.from_user_id === user.id) {
+          if (user && data.from_user_id === user.id) {
             setRequestsSent((prev) =>
               prev.filter((r) => r.id !== data.to_user_id)
             );
-          } else if (data.to_user_id === user.id) {
+          } else if (user && data.to_user_id === user.id) {
             setRequestsReceived((prev) =>
               prev.filter((r) => r.id !== data.from_user_id)
             );
@@ -615,14 +588,16 @@ export default function ChatPage() {
           break;
       }
     };
-    // ✅ cleanup: remove listener on unmount/re-render
 
-    socket.on("users_connections:changed", handleConnectionChange);
-
+    socket.on("users_connections:update", handleConnectionChange);
     return () => {
-      socket.off("users_connections:changed", handleConnectionChange);
+      const socket = getSocket();
+      if (socket) {
+        socket.off("users_connections:update", handleConnectionChange);
+      }
     };
-  }, [contacts]);
+  }, [contacts, requestsReceived, requestsSent, user, user?.id]); // ✅ only depends on contacts + user id
+
   /////////////////////////////////////////////////////////////////////////////
   // render
   if (!currentUser) return <div>Loading...</div>;
