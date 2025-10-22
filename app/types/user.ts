@@ -17,6 +17,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   role_name?: string;
+  office_location?: string;
 }
 
 // Default user object

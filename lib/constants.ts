@@ -3,3 +3,8 @@ export const USER_ROLES = [
   { role_id: 2, role: "Admin" },
   { role_id: 3, role: "Agent" },
 ];
+
+export const ADMIN_USER_ROLES = [
+  { role_id: 2, role: "Admin" },
+  { role_id: 3, role: "Agent" },
+];

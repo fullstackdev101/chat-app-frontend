@@ -4,7 +4,8 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { User, defaultUser } from "../../types/user"; // <-- defaultUser defined in types
 import { createUser, updateUser } from "../../../services/authService";
-import { USER_ROLES } from "../../../lib/constants";
+import { USER_ROLES, ADMIN_USER_ROLES } from "../../../lib/constants";
+import { useAuthStore } from "../../store/authStore";
 
 interface UserModalsProps {
   modalOpen: boolean;
@@ -25,6 +26,8 @@ export default function UserModals({
   setEditingUser,
   viewingUser,
 }: UserModalsProps) {
+  const user = useAuthStore((state) => state.user);
+
   // ✅ Always have all fields
   const [form, setForm] = useState<User>(defaultUser);
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -188,13 +191,18 @@ export default function UserModals({
                 onChange={(e) =>
                   handleInputChange("role_id", Number(e.target.value))
                 }
-                className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
+                disabled={form.role_id === 1 && !!editingUser} // 👈 disable when role_id is 1
+                className={`p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400 ${
+                  form.role_id === 1 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
-                {USER_ROLES.map((r) => (
-                  <option key={r.role_id} value={r.role_id}>
-                    {r.role}
-                  </option>
-                ))}
+                {(user?.role_id === 1 ? USER_ROLES : ADMIN_USER_ROLES).map(
+                  (r) => (
+                    <option key={r.role_id} value={r.role_id}>
+                      {r.role}
+                    </option>
+                  )
+                )}
               </select>
 
               <select

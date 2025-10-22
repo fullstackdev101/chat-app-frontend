@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Eye, Plus, ShieldOff } from "lucide-react";
+import { Edit, Trash2, Eye, Plus, ShieldOff, Shield } from "lucide-react";
 import { getUsers } from "@/services/authService"; // ✅ import API service
 import { User } from "../../types/user";
 // import { User as ChatUser } from "../../chat/types/index";
 import UserModals from "./UserModals";
 import UserIpModal from "./UserIpModal";
 import { getSocket } from "../../../lib/socket"; // ✅ import socket instance
+import { useAuthStore } from "../../store/authStore";
 
 export const defaultUser: User = {
   id: 0,
@@ -39,22 +40,27 @@ export default function UsersPage() {
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
 
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role_id === 1;
+
   // ✅ Fetch users from backend
   useEffect(() => {
-    async function fetchUsers() {
-      try {
-        const data = await getUsers();
-        console.log("----------------- Fetch Users -------------------");
-        console.log(data);
-        setUsers(data); // set backend data
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchUsers();
   }, []);
+
+  // ✅ Define this function outside of useEffect
+  const fetchUsers = async () => {
+    try {
+      const data = await getUsers();
+      console.log("----------------- Fetch Users -------------------");
+      console.log(data);
+      setUsers(data);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const socket = getSocket();
@@ -107,12 +113,6 @@ export default function UsersPage() {
       (u.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
-  // const filteredUsers = users.filter(
-  //   (u) =>
-  //     (u.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-  //     (u.username ?? "").toLowerCase().includes(search.toLowerCase()) ||
-  //     (u.email ?? "").toLowerCase().includes(search.toLowerCase())
-  // );
   const totalPages = Math.ceil(filteredUsers.length / recordsPerPage);
   const currentUsers = filteredUsers.slice(
     (currentPage - 1) * recordsPerPage,
@@ -121,50 +121,6 @@ export default function UsersPage() {
 
   // console.log("----- Current Users -----");
   // console.log(currentUsers);
-
-  // const handleInputChange = (field: keyof User, value: any) => {
-  //   setForm((prev) => ({ ...prev, [field]: value }));
-  // };
-
-  // const handleSubmit = (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!form.name || !form.username || !form.email || !form.password) {
-  //     alert("Name, Username, Email, and Password are required.");
-  //     return;
-  //   }
-
-  //   if (editingUser) {
-  //     setUsers((prev) =>
-  //       prev.map((u) => (u.id === editingUser.id ? { ...u, ...form } : u))
-  //     );
-  //   } else {
-  //     setUsers((prev) => [
-  //       ...prev,
-  //       {
-  //         ...form,
-  //         id: prev.length + 1,
-  //         account_status: form.account_status || "active",
-  //       } as User,
-  //     ]);
-  //   }
-  //   setModalOpen(false);
-  //   setEditingUser(null);
-  //   // setForm({});
-  // };
-
-  // const toggleStatus = (id: number) => {
-  //   setUsers((prev) =>
-  //     prev.map((user) =>
-  //       user.id === id
-  //         ? {
-  //             ...user,
-  //             account_status:
-  //               user.account_status === "active" ? "inactive" : "active",
-  //           }
-  //         : user
-  //     )
-  //   );
-  // };
 
   const openEditModal = (user: User) => {
     setEditingUser({
@@ -203,9 +159,14 @@ export default function UsersPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-slate-800 to-blue-950 p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-white bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 bg-clip-text text-transparent">
-          User Management
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-white bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 bg-clip-text text-transparent">
+            User Management
+          </h1>
+          <p className="text-white/70 text-sm mt-1">
+            Total Users: {users.length}
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <input
             type="text"
@@ -253,6 +214,9 @@ export default function UsersPage() {
               <th className="px-4 py-2 text-sm font-semibold text-white/80">
                 Presence
               </th>
+              <th className="px-4 py-2 text-sm font-semibold text-white/80">
+                Location
+              </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80 text-right">
                 Actions
               </th>
@@ -298,14 +262,40 @@ export default function UsersPage() {
                     {user.presence}
                   </span> */}
                 </td>
+                <td className="px-4 py-1 text-white/90">
+                  {user.office_location}
+                </td>
                 <td className="px-4 py-1">
                   <div className="flex justify-end items-center gap-2 h-full">
                     <button
-                      className="text-white/80 hover:text-sky-300 p-1 transition"
-                      onClick={() => openIpUserModal(user)}
+                      className={`p-1 transition rounded ${
+                        user.office_location
+                          ? "text-green-400 cursor-not-allowed opacity-70"
+                          : isAdmin
+                          ? "text-white/80 hover:text-sky-300"
+                          : "text-gray-500 cursor-not-allowed opacity-50"
+                      }`}
+                      onClick={() => {
+                        if (isAdmin && !user.office_location) {
+                          openIpUserModal(user);
+                        }
+                      }}
+                      title={
+                        user.office_location
+                          ? `Location assigned : ${user.office_location}`
+                          : isAdmin
+                          ? "Assign Location to user"
+                          : "Only Super Admin can assign location to the users"
+                      }
+                      disabled={!!user.office_location || !isAdmin}
                     >
-                      <ShieldOff size={16} />
+                      {user.office_location ? (
+                        <Shield size={16} /> // 🛡️ Assigned
+                      ) : (
+                        <ShieldOff size={16} /> // 🚫 Not assigned
+                      )}
                     </button>
+
                     <button
                       className="text-white/80 hover:text-sky-300 p-1 transition"
                       onClick={() => openViewModal(user)}
@@ -318,9 +308,15 @@ export default function UsersPage() {
                     >
                       <Edit size={16} />
                     </button>
-                    <button className="text-red-400 hover:text-red-500 p-1 transition">
+                    <button
+                      className="text-red-400 hover:text-red-500 p-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={true} // e.g. user.role_id !== 1
+                    >
                       <Trash2 size={16} />
                     </button>
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                      Disabled — only admins can delete users
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -376,6 +372,7 @@ export default function UsersPage() {
         ipModalOpen={ipModalOpen}
         setIpModalOpen={setIpModalOpen}
         editingUser={editingUser}
+        onIpAssigned={fetchUsers} // 👈 call refresh here
       />
     </div>
   );

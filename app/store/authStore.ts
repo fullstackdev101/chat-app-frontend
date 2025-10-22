@@ -1,4 +1,5 @@
-// app/store/authStore.ts
+"use client";
+
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
@@ -8,24 +9,34 @@ interface User {
   name: string;
   email?: string;
   role_name?: string;
+  role_id: number;
+  user_ip: string;
+  office_location: string | null;
+  sup_admin_selected_ip?: string;
 }
 
 interface AuthState {
   user: User | null;
   setUser: (user: User) => void;
+  updateUser: (partialUser: Partial<User>) => void;
   clearUser: () => void;
 }
 
-const initialState: AuthState = {
-  user: null,
-  setUser: () => {},
-  clearUser: () => {},
-};
-
 export const useAuthStore = create<AuthState>()(
   devtools((set) => ({
-    ...initialState,
+    user: null,
+
     setUser: (user) => set({ user }, false, "auth/setUser"),
-    clearUser: () => set(initialState, false, "auth/clearUser"), // ✅ resets everything
+
+    updateUser: (partialUser) =>
+      set(
+        (state) => ({
+          user: state.user ? { ...state.user, ...partialUser } : null,
+        }),
+        false,
+        "auth/updateUser"
+      ),
+
+    clearUser: () => set({ user: null }, false, "auth/clearUser"),
   }))
 );

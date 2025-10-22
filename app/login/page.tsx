@@ -113,6 +113,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="text-sky-400 hover:text-sky-300 text-sm font-medium transition-colors"
+              title="Contact Administrator to reset your password."
             >
               Forgot Password?
             </button>

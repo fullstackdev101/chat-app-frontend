@@ -52,7 +52,7 @@ export const getSocket = (): SocketClient<
   }
 
   if (!socket) {
-    socket = io("http://localhost:4000", {
+    socket = io(process.env.NEXT_PUBLIC_API_URL, {
       transports: ["polling", "websocket"],
       autoConnect: true,
       withCredentials: false,

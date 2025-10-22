@@ -295,8 +295,20 @@ export default function IpRestrictionsPage() {
                           <Pencil className="h-5 w-5" />
                         </button>
                         <button
-                          onClick={() => removeIp(entry.id)}
-                          className="p-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition"
+                          onClick={() => {
+                            if (entry.id !== 1) removeIp(entry.id);
+                          }}
+                          disabled={entry.id === 1}
+                          title={
+                            entry.id === 1
+                              ? "Global IP cannot be removed/deleted"
+                              : "Remove this IP"
+                          }
+                          className={`p-2 rounded-lg transition ${
+                            entry.id === 1
+                              ? "bg-red-500/10 text-red-400 opacity-60 cursor-not-allowed"
+                              : "bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white"
+                          }`}
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>

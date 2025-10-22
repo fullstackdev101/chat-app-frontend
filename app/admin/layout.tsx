@@ -2,21 +2,49 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Shield, Users, LayoutDashboard, LogOut, Home } from "lucide-react";
+import {
+  Shield,
+  Users,
+  // UserPlus,
+  // Settings,
+  LayoutDashboard,
+  LogOut,
+  Home,
+} from "lucide-react";
 import { ReactNode } from "react";
 import { useAuthStore } from "../store/authStore";
+
+// const menuItems = [
+//   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+//   { name: "Users", href: "/admin/users", icon: Users },
+//   { name: "IP Restrictions", href: "/admin/ip-restrictions", icon: Shield },
+// ];
 
 const menuItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
+  // { name: "Groups", href: "/admin/groups", icon: UserPlus },
   { name: "IP Restrictions", href: "/admin/ip-restrictions", icon: Shield },
+  // { name: "Messages Tracker", href: "/admin/messages-tracker", icon: Settings },
+  // {
+  //   name: "Messages Tracking",
+  //   href: "/admin/messages-tracking",
+  //   icon: Settings,
+  // },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const user = useAuthStore((state) => state.user);  
+  const user = useAuthStore((state) => state.user);
+
+  const filteredMenuItems =
+    user?.role_id !== 1
+      ? menuItems.filter(
+          (item) => item.name === "Dashboard" || item.name === "Users"
+        )
+      : menuItems;
 
   const handleLogout = () => {
     router.push("/login");
@@ -55,7 +83,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Main Menu */}
         <nav className="mt-4 space-y-2 flex-1">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link

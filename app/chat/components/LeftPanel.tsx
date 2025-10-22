@@ -90,8 +90,21 @@ export default function LeftPanel({
             Groups
           </h3>
           <button
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             onClick={onOpenGroupModal}
+            disabled={
+              !(currentUser?.role_id === 1 || currentUser?.role_id === 2)
+            }
+            title={
+              !(currentUser?.role_id === 1 || currentUser?.role_id === 2)
+                ? "Agent not allowed to create group."
+                : ""
+            }
+            className={`text-sm px-3 py-1 rounded 
+    ${
+      currentUser?.role_id === 1 || currentUser?.role_id === 2
+        ? "text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+        : "text-gray-400 cursor-not-allowed"
+    }`}
           >
             + New
           </button>

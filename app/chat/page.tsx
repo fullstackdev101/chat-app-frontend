@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getSocket } from "../../lib/socket";
 import { Socket as SocketClient } from "socket.io-client";
 import { useRouter } from "next/navigation";
-import { getPreloads } from "@/services/preloadService";
-import { getContacts } from "@/services/preloadService";
+import { getPreloads, getContacts } from "@/services/preloadService";
 import { Group, Message } from "./types";
 import { User } from "../types/user";
 import Header from "./components/Header";
@@ -42,7 +41,15 @@ export default function ChatPage() {
   );
 
   const user = useAuthStore((state) => state.user);
+  console.log("sup_admin_selected_ip:   " + user?.sup_admin_selected_ip);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
   const socketRef = useRef<SocketClient | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -63,38 +70,45 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data } = await getPreloads();
-        // console.log("RESPONSE:");
-        // console.log(data.pendingRequestsReceived);
-        // console.log(data.pendingRequestsSent);
+        const selectedIp = user?.sup_admin_selected_ip || user?.user_ip;
+        if (selectedIp) {
+          const { data } = await getPreloads(selectedIp);
 
-        setUsers(data.users || []);
-        setRequestsReceived(data.pendingRequestsReceived || []);
-        setRequestsSent(data.pendingRequestsSent || []);
-        setGroups(data.groups || []);
-        setDirectMessages(data.messages?.direct || {});
-        setGroupMessages(data.messages?.groups || {});
+          // console.log("RESPONSE:");
+          // console.log(data.pendingRequestsReceived);
+          // console.log(data.pendingRequestsSent);
 
-        const savedId = user?.id;
-        // console.log("----->" + savedId);
-        // store demoUserId so other parts of app can use it
-        sessionStorage.setItem("demoUserId", String(savedId));
+          setUsers(data.users || []);
+          setRequestsReceived(data.pendingRequestsReceived || []);
+          setRequestsSent(data.pendingRequestsSent || []);
+          setGroups(data.groups || []);
+          setDirectMessages(data.messages?.direct || {});
+          setGroupMessages(data.messages?.groups || {});
 
-        const chosen: User | undefined = data.users.find(
-          (u: User) => String(u.id) === String(savedId)
-        );
+          const savedId = user?.id;
+          // console.log("----->" + savedId);
+          // store demoUserId so other parts of app can use it
+          sessionStorage.setItem("demoUserId", String(savedId));
 
-        // console.log("----->" + chosen);
+          const chosen: User | undefined = data.users.find(
+            (u: User) => String(u.id) === String(savedId)
+          );
 
-        if (!chosen) {
-          // if user not found, do not set current user (keeps previous behavior)
-          console.warn("Chosen user not found from users list:", savedId);
-          return;
+          // console.log("----->" + chosen);
+
+          if (!chosen) {
+            // if user not found, do not set current user (keeps previous behavior)
+            console.warn("Chosen user not found from users list:", savedId);
+            return;
+          }
+
+          const me: User = {
+            ...chosen,
+            name: `${chosen.name} (${user ? user.office_location : ""})`,
+          };
+          setCurrentUser(me);
+          currentUserIdRef.current = chosen.id;
         }
-
-        const me: User = { ...chosen, name: `${chosen.name} (You)` };
-        setCurrentUser(me);
-        currentUserIdRef.current = chosen.id;
       } catch (err) {
         console.error("Failed to fetch users/groups:", err);
       }
@@ -103,7 +117,7 @@ export default function ChatPage() {
     fetchData();
     // NOTE: we intentionally run this once; `user` from authStore is read initially.
     // If you expect `user` to change and want to react, add [user] here.
-  }, [user?.id]);
+  }, [user, user?.id]);
 
   useEffect(() => {
     currentUserIdRef.current = currentUser?.id ?? null;
@@ -331,14 +345,57 @@ export default function ChatPage() {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
 
+    // Allowed extensions
+    const allowedExtensions = [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "webp",
+      "svg",
+      "pdf",
+      "doc",
+      "docx",
+      "xls",
+      "xlsx",
+      "ppt",
+      "pptx",
+      "txt",
+      "mp3",
+      "wav",
+      "mp4",
+    ];
+
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      alert(
+        "❌ File type not allowed. Please upload images or documents only."
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // Optional: restrict file size (e.g., 10 MB)
+    const maxSizeMB = 10;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      alert(`❌ File too large. Maximum size is ${maxSizeMB}MB.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:4000/api/chat/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chat/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
       const uploaded = await res.json();
 
       const msg: Partial<Message> = {
@@ -348,6 +405,7 @@ export default function ChatPage() {
         ...(selectedUser ? { to_user: selectedUser.id } : {}),
         ...(selectedGroup ? { group_id: selectedGroup.id } : {}),
       };
+
       socketRef.current?.emit("message", msg);
     } catch (err) {
       console.error("Upload failed", err);
@@ -362,6 +420,8 @@ export default function ChatPage() {
     sessionStorage.removeItem("demoUserId");
     router.push("/login");
   };
+
+  const goHome = () => router.push("/");
 
   // ---------------------------
   // When selecting a user, load that conversation from directMessages
@@ -409,23 +469,46 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const { data: allContacts } = await getContacts();
+        // const selectedIp = user?.sup_admin_selected_ip;
+        const selectedIp = user?.sup_admin_selected_ip || user?.user_ip;
+        // console.log("------------- LINE 474 --------------");
+        // console.log(selectedIp);
 
-        setContacts(() => {
-          const excludeIds = [
-            ...requestsReceived.map((r) => r.id),
-            ...requestsSent.map((r) => r.id),
-            ...users.map((r) => r.id),
-          ];
+        if (selectedIp) {
+          console.log("-------- line 478 ---------");
+          const { data: allContacts } = await getContacts(selectedIp);
 
-          return allContacts.filter((c: User) => !excludeIds.includes(c.id));
-        });
+          // console.log(users);
+
+          // const contactIds = new Set(allContacts.map((c: User) => c.id));
+          // setUsers((prevUsers) =>
+          //   prevUsers.filter((u: User) => !contactIds.has(u.id))
+          // );
+
+          // console.log(users);
+
+          setContacts(() => {
+            const excludeIds = [
+              ...requestsReceived.map((r) => r.id),
+              ...requestsSent.map((r) => r.id),
+              ...users.map((r) => r.id),
+            ];
+
+            return allContacts.filter((c: User) => !excludeIds.includes(c.id));
+          });
+        }
       } catch (err) {
         console.error("Failed to preload chat data:", err);
       }
     };
     fetchContacts();
-  }, [requestsReceived, requestsSent, users]); // ✅ safe to leave empty now
+  }, [
+    requestsReceived,
+    requestsSent,
+    users,
+    user?.sup_admin_selected_ip,
+    user?.user_ip,
+  ]); // ✅ safe to leave empty now
 
   ////////////////////////////////////////////////////////////////////////////
   // ✅ Accept / Reject / Delete handlers
@@ -609,7 +692,11 @@ export default function ChatPage() {
     <div className="flex h-screen bg-blue-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* LEFT */}
       <div className="flex flex-col w-72">
-        <Header currentUser={currentUser} onLogout={handleLogout} />
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          goHome={goHome}
+        />
         <LeftPanel
           users={users}
           groups={groups}

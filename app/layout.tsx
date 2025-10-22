@@ -3,7 +3,7 @@ import "./globals.css";
 import ProtectedLayout from "./ProtectedLayout";
 
 export const metadata = {
-  title: "Chat App",
+  title: "ChatSphere Internal Chat App",
   description: "Minimal realtime chat",
 };
 
