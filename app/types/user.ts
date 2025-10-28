@@ -18,6 +18,8 @@ export interface User {
   updated_at: string;
   role_name?: string;
   office_location?: string;
+  sup_admin_selected_ip?: string;
+  user_ip?: string;
 }
 
 // Default user object

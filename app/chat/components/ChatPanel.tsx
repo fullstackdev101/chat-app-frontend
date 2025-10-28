@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Group, Message } from "../types";
 import { User } from "../../types/user";
-import { Paperclip } from "lucide-react"; // modern clip icon
+import { Paperclip } from "lucide-react";
 
 interface ChatPanelProps {
   currentUser: User;
@@ -11,11 +11,11 @@ interface ChatPanelProps {
   messages: Message[];
   users: User[];
   newMessage: string;
-  onSendDirect: (e: React.FormEvent) => void;
-  onSendGroup: (e: React.FormEvent) => void;
+  onSend: (e: React.FormEvent) => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onAttachClick: () => void;
   onMessageChange: (msg: string) => void;
+  selectedFile?: File | null;
+  onClearFile?: () => void; // ✅ new prop for parent to clear file
 }
 
 export default function ChatPanel({
@@ -25,21 +25,29 @@ export default function ChatPanel({
   messages,
   users,
   newMessage,
-  onSendDirect,
-  onSendGroup,
+  onSend,
   onFileChange,
   onMessageChange,
+  selectedFile,
+  onClearFile,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Auto scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ✅ Keep send pure — don’t clear anything before sending
   const handleSubmit = (e: React.FormEvent) => {
-    if (selectedGroup) onSendGroup(e);
-    else if (selectedUser) onSendDirect(e);
+    e.preventDefault();
+    onSend(e);
+  };
+
+  // ✅ Properly clear file input and notify parent
+  const handleClearFile = () => {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (onClearFile) onClearFile(); // parent clears its selectedFile state
   };
 
   const getUserName = (userId: number) => {
@@ -64,7 +72,6 @@ export default function ChatPanel({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
         {messages.map((msg, idx) => {
-          // Unique key: use DB id if available, else fallback to index
           const key =
             msg.id ?? `${msg.from_user}-${msg.to_user ?? msg.group_id}-${idx}`;
           const isSender = msg.from_user === currentUser.id;
@@ -102,38 +109,65 @@ export default function ChatPanel({
         <div ref={messagesEndRef}></div>
       </div>
 
-      {/* Input */}
+      {/* Input Area */}
       <form
         onSubmit={handleSubmit}
         className="p-4 flex items-center space-x-2 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
       >
-        {/* Hidden file input + clickable icon */}
-        <label
-          htmlFor="file-upload"
-          className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        {/* File Upload */}
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedUser || selectedGroup) {
+              fileInputRef.current?.click();
+            }
+          }}
+          className={`text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 ${
+            !selectedUser && !selectedGroup
+              ? "pointer-events-none opacity-50"
+              : ""
+          }`}
         >
           <Paperclip size={22} />
-        </label>
+        </button>
+
         <input
-          id="file-upload"
           type="file"
+          ref={fileInputRef}
           className="hidden"
+          id="file-upload"
           onChange={onFileChange}
         />
-        <input
-          type="text"
-          placeholder="Type a message..."
-          className="flex-1 border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-          value={newMessage}
-          onChange={(e) => onMessageChange(e.target.value)}
-        />
-        {/* <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-        >
-          Send
-        </button> */}
 
+        {/* Input + Clear */}
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder={
+              selectedFile ? `📎 ${selectedFile.name}` : "Type a message..."
+            }
+            className={`w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 pr-8 ${
+              !selectedUser && !selectedGroup
+                ? "bg-gray-400 cursor-not-allowed"
+                : ""
+            }`}
+            disabled={(!selectedUser && !selectedGroup) || !!selectedFile}
+            value={selectedFile ? `📎 ${selectedFile.name}` : newMessage}
+            onChange={(e) => onMessageChange(e.target.value)}
+          />
+
+          {selectedFile && (
+            <button
+              type="button"
+              onClick={handleClearFile}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Send */}
         <button
           type="submit"
           disabled={!selectedUser && !selectedGroup}

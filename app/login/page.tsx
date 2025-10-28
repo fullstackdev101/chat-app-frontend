@@ -15,6 +15,7 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -96,16 +97,62 @@ export default function LoginPage() {
           </div>
 
           {/* Password */}
+          {/* Password */}
           <div className="relative">
             <Lock className="absolute left-3 top-3 h-5 w-5 text-blue-300" />
+
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-3 py-3 rounded-xl bg-slate-950/60 text-white border border-blue-800/50 placeholder-blue-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
+              className="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-950/60 text-white border border-blue-800/50 placeholder-blue-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
             />
+
+            {/* 👁️ Toggle Password Visibility */}
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-blue-300 hover:text-sky-400"
+            >
+              {showPassword ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.96 9.96 0 012.532-4.568m3.226-2.366A9.961 9.961 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.965 9.965 0 01-4.005 5.297M3 3l18 18"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
 
           {/* Forgot Password */}

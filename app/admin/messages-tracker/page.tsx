@@ -1,227 +1,144 @@
-// app/messages-tracker/page.tsx
 "use client";
 
-import { useState } from "react";
-import { FileText, Check, CheckCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getConversations } from "@/services/messagesService"; // ✅ import API service
+import axios from "axios";
 
 interface Message {
   id: number;
   sender: string;
-  receiver?: string;
-  group?: string;
-  text?: string;
-  file_url?: string;
-  file_name?: string;
-  is_read: boolean;
-  created_at: string;
-  status: "approved" | "inactive" | "deleted";
+  text: string;
+  timestamp: string;
+}
+
+interface Conversation {
+  id: number;
   type: "direct" | "group";
+  title: string;
+  participants: string[];
+  messages: Message[];
 }
 
 export default function MessagesTrackerPage() {
-  const [selectedConversation, setSelectedConversation] = useState<
-    number | null
-  >(1);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "John Doe",
-      receiver: "Sarah Connor",
-      text: "Hey Sarah, did you get the report?",
-      created_at: "2025-09-13 14:30",
-      is_read: true,
-      status: "approved",
-      type: "direct",
-    },
-    {
-      id: 2,
-      sender: "Sarah Connor",
-      receiver: "John Doe",
-      text: "Yes, reviewing it now. Looks solid!",
-      created_at: "2025-09-13 14:32",
-      is_read: true,
-      status: "approved",
-      type: "direct",
-    },
-    {
-      id: 3,
-      sender: "John Doe",
-      receiver: "Sarah Connor",
-      file_url: "/files/financials.xlsx",
-      file_name: "Q3_Financials.xlsx",
-      created_at: "2025-09-13 14:35",
-      is_read: false,
-      status: "inactive",
-      type: "direct",
-    },
-    {
-      id: 4,
-      sender: "Alice",
-      group: "Dev Team",
-      text: "Reminder: Code freeze starts tomorrow.",
-      created_at: "2025-09-13 15:00",
-      is_read: true,
-      status: "approved",
-      type: "group",
-    },
-    {
-      id: 5,
-      sender: "Michael",
-      group: "Dev Team",
-      text: "Got it. I’ll push final changes tonight.",
-      created_at: "2025-09-13 15:05",
-      is_read: true,
-      status: "deleted",
-      type: "group",
-    },
-  ]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] =
+    useState<Conversation | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  // ✅ Fetch data from external JSON (simulate API)
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        // const res = await axios.get("/api/conversations.json");
+        // console.log(res);
+        const res1 = await getConversations();
+        // console.log(res1.data);
+        // getConversationsData
+        //   // const data = res.data.conversations;
+        const data = res1;
+        // console.log(res1);
+        // console.log(data);
 
-  const updateStatus = (
-    id: number,
-    newStatus: "approved" | "inactive" | "deleted"
-  ) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
+        // Sort: direct first, group second
+        const sorted = [
+          ...data.filter((c: Conversation) => c.type === "direct"),
+          ...data.filter((c: Conversation) => c.type === "group"),
+        ];
+
+        setConversations(sorted);
+        setSelectedConversation(sorted[0]);
+      } catch (err) {
+        console.error("Error fetching conversations:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConversations();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-600">
+        Loading conversations...
+      </div>
     );
-    setOpenMenuId(null);
-  };
+  }
+
+  if (!selectedConversation) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-600">
+        No conversation found.
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 font-semibold">
-          Conversations
-        </div>
-        <div
-          onClick={() => setSelectedConversation(1)}
-          className={`px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900 transition ${
-            selectedConversation === 1
-              ? "bg-blue-600 text-white"
-              : "text-gray-700 dark:text-gray-200"
-          }`}
-        >
-          John Doe ↔ Sarah Connor
-        </div>
-        <div
-          onClick={() => setSelectedConversation(2)}
-          className={`px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900 transition ${
-            selectedConversation === 2
-              ? "bg-blue-600 text-white"
-              : "text-gray-700 dark:text-gray-200"
-          }`}
-        >
-          Dev Team (Group)
+      <div className="w-72 bg-white border-r border-gray-300 flex flex-col">
+        <div className="p-4 border-b font-bold text-lg">📊 Message Tracker</div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-2 text-xs text-gray-500 uppercase">
+            Direct Chats
+          </div>
+          {conversations
+            .filter((c) => c.type === "direct")
+            .map((chat) => (
+              <div
+                key={chat.id}
+                onClick={() => setSelectedConversation(chat)}
+                className={`px-4 py-2 cursor-pointer hover:bg-blue-100 ${
+                  selectedConversation.id === chat.id ? "bg-blue-200" : ""
+                }`}
+              >
+                💬 {chat.title}
+              </div>
+            ))}
+
+          <div className="p-2 text-xs text-gray-500 uppercase mt-3">
+            Group Chats
+          </div>
+          {conversations
+            .filter((c) => c.type === "group")
+            .map((chat) => (
+              <div
+                key={chat.id}
+                onClick={() => setSelectedConversation(chat)}
+                className={`px-4 py-2 cursor-pointer hover:bg-blue-100 ${
+                  selectedConversation.id === chat.id ? "bg-blue-200" : ""
+                }`}
+              >
+                👥 {chat.title}
+              </div>
+            ))}
         </div>
       </div>
 
-      {/* Main Panel */}
+      {/* Main Chat Panel */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow">
-          <h2 className="font-semibold text-lg">
-            {selectedConversation === 1 ? "John ↔ Sarah" : "Dev Team"}
+        <div className="p-4 border-b bg-white">
+          <h2 className="text-xl font-semibold">
+            {selectedConversation.title}
           </h2>
-          <p className="text-xs text-gray-500">
-            {selectedConversation === 1
-              ? "Direct conversation"
-              : "Group conversation"}
+          <p className="text-sm text-gray-500">
+            Participants: {selectedConversation.participants.join(", ")}
           </p>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 relative">
-          {messages
-            .filter((msg) =>
-              selectedConversation === 1
-                ? msg.type === "direct"
-                : msg.type === "group"
-            )
-            .map((msg) => (
-              <div
-                key={msg.id}
-                className={`relative max-w-lg p-4 rounded-2xl shadow-sm cursor-pointer group ${
-                  msg.type === "direct"
-                    ? msg.sender === "John Doe"
-                      ? "ml-auto bg-blue-600 text-white"
-                      : "mr-auto bg-gray-200 dark:bg-gray-700"
-                    : "mr-auto bg-gray-100 dark:bg-gray-700"
-                }`}
-                onClick={() =>
-                  setOpenMenuId(openMenuId === msg.id ? null : msg.id)
-                }
-              >
-                {/* Sender */}
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="font-semibold">{msg.sender}</span>
-                  <span className="text-gray-400">{msg.created_at}</span>
-                </div>
-
-                {/* Content */}
-                {msg.text && <p className="text-sm">{msg.text}</p>}
-
-                {msg.file_url && (
-                  <div className="mt-2 flex items-center gap-2 text-sm underline cursor-pointer">
-                    <FileText className="w-4 h-4" />
-                    <a href={msg.file_url} target="_blank">
-                      {msg.file_name}
-                    </a>
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="flex justify-between items-center mt-2 text-xs">
-                  <div>
-                    {msg.is_read ? (
-                      <span className="flex items-center text-green-400 gap-1">
-                        <CheckCheck className="w-3 h-3" /> Read
-                      </span>
-                    ) : (
-                      <span className="flex items-center text-gray-400 gap-1">
-                        <Check className="w-3 h-3" /> Unread
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full ${
-                      msg.status === "approved"
-                        ? "bg-green-500 text-white"
-                        : msg.status === "inactive"
-                        ? "bg-yellow-500 text-white"
-                        : "bg-red-500 text-white"
-                    }`}
-                  >
-                    {msg.status}
-                  </span>
-                </div>
-
-                {/* Status Dropdown */}
-                {openMenuId === msg.id && (
-                  <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 z-50">
-                    <div
-                      onClick={() => updateStatus(msg.id, "approved")}
-                      className="px-4 py-2 hover:bg-green-100 dark:hover:bg-green-900 cursor-pointer"
-                    >
-                      Approve
-                    </div>
-                    <div
-                      onClick={() => updateStatus(msg.id, "inactive")}
-                      className="px-4 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-900 cursor-pointer"
-                    >
-                      Mark Inactive
-                    </div>
-                    <div
-                      onClick={() => updateStatus(msg.id, "deleted")}
-                      className="px-4 py-2 hover:bg-red-100 dark:hover:bg-red-900 cursor-pointer"
-                    >
-                      Delete
-                    </div>
-                  </div>
-                )}
+        <div className="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-3">
+          {selectedConversation.messages.map((msg) => (
+            <div key={msg.id} className="flex flex-col">
+              <div className="text-sm font-semibold text-gray-700">
+                {msg.sender}
               </div>
-            ))}
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <p className="text-gray-800">{msg.text}</p>
+                <span className="text-xs text-gray-400 mt-1 block">
+                  {msg.timestamp}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
