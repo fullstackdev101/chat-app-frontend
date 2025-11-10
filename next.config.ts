@@ -9,6 +9,19 @@ const nextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com", // ✅ allow Cloudinary images
+      },
+      {
+        protocol: "http",
+        hostname: "localhost", // ✅ allow local dev uploads
+        port: "4000",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

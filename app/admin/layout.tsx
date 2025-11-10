@@ -6,7 +6,7 @@ import {
   Shield,
   Users,
   // UserPlus,
-  // Settings,
+  Settings,
   LayoutDashboard,
   LogOut,
   Home,
@@ -25,7 +25,7 @@ const menuItems = [
   { name: "Users", href: "/admin/users", icon: Users },
   // { name: "Groups", href: "/admin/groups", icon: UserPlus },
   { name: "IP Restrictions", href: "/admin/ip-restrictions", icon: Shield },
-  // { name: "Messages Tracker", href: "/admin/messages-tracker", icon: Settings },
+  { name: "Messages Tracker", href: "/admin/messages-tracker", icon: Settings },
   // {
   //   name: "Messages Tracking",
   //   href: "/admin/messages-tracking",

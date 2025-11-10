@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "../../lib/socket";
-import { Socket as SocketClient } from "socket.io-client";
+import type { MinimalSocket } from "../../lib/socket";
 import { useRouter } from "next/navigation";
 import { getPreloads, getContacts } from "@/services/preloadService";
 import { Group, Message } from "./types";
@@ -40,8 +40,10 @@ export default function ChatPage() {
     {}
   );
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const user = useAuthStore((state) => state.user);
-  console.log("sup_admin_selected_ip:   " + user?.sup_admin_selected_ip);
+  // console.log("sup_admin_selected_ip:   " + user?.sup_admin_selected_ip);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,17 +52,14 @@ export default function ChatPage() {
     }
   }, [user, router]);
 
-  const socketRef = useRef<SocketClient | null>(null);
+  const socketRef = useRef<MinimalSocket | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // refs used for comparing in listeners
   const currentUserIdRef = useRef<number | null>(null);
   const selectedUserIdRef = useRef<number | null>(null);
   const selectedGroupIdRef = useRef<number | null>(null);
-
-  // console.log("-------- LINE 45 ---------");
-  // console.log(users);
-  // console.log(pendingRequests);
 
   // ---------------------------
   // Preload (initial snapshot)
@@ -304,43 +303,15 @@ export default function ChatPage() {
   }, [currentUser?.id]);
 
   // ---------------------------
-  // Send direct message (emit only, server will echo and update state)
-  // ---------------------------
-  const sendDirect = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedUser || !currentUser) return;
-
-    const msg: Partial<Message> = {
-      from_user: currentUser.id,
-      to_user: selectedUser.id,
-      text: newMessage.trim(),
-    };
-
-    // emit to server; server will save and emit back to both sides
-    socketRef.current?.emit("message", msg);
-    setNewMessage("");
-  };
 
   // ---------------------------
   // Send group message
   // ---------------------------
-  const sendGroup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedGroup || !currentUser) return;
-
-    const msg: Partial<Message> = {
-      from_user: currentUser.id,
-      group_id: selectedGroup.id,
-      text: newMessage.trim(),
-    };
-
-    socketRef.current?.emit("message", msg);
-    setNewMessage("");
-  };
 
   // ---------------------------
   // File upload -> emit message with file info
   // ---------------------------
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
@@ -383,38 +354,8 @@ export default function ChatPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/chat/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const uploaded = await res.json();
-
-      const msg: Partial<Message> = {
-        from_user: currentUser.id,
-        file_url: uploaded.fileUrl,
-        file_name: uploaded.fileName,
-        ...(selectedUser ? { to_user: selectedUser.id } : {}),
-        ...(selectedGroup ? { group_id: selectedGroup.id } : {}),
-      };
-
-      socketRef.current?.emit("message", msg);
-    } catch (err) {
-      console.error("Upload failed", err);
-    }
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setSelectedFile(file);
   };
-
-  const handleAttachClick = () => fileInputRef.current?.click();
 
   const handleLogout = () => {
     sessionStorage.removeItem("demoUserId");
@@ -422,6 +363,51 @@ export default function ChatPage() {
   };
 
   const goHome = () => router.push("/");
+
+  // --------------------------------------------------
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    if (!newMessage.trim() && !selectedFile) return;
+
+    let uploadedFileData: { fileUrl?: string; fileName?: string } = {};
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chat/upload`,
+        { method: "POST", body: formData }
+      );
+      uploadedFileData = await res.json();
+    }
+
+    const msg: Partial<Message> = {
+      from_user: currentUser.id,
+      text: newMessage.trim() || "",
+      ...(selectedUser ? { to_user: selectedUser.id } : {}),
+      ...(selectedGroup ? { group_id: selectedGroup.id } : {}),
+      ...(uploadedFileData.fileUrl
+        ? {
+            file_url: uploadedFileData.fileUrl,
+            file_name: uploadedFileData.fileName,
+          }
+        : {}),
+    };
+
+    socketRef.current?.emit("message", msg);
+
+    // 👇 Add this to show sent message immediately
+    // setMessages((prev) => [...prev, msg as Message]);
+
+    setNewMessage("");
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // ------------------------------------------------
 
   // ---------------------------
   // When selecting a user, load that conversation from directMessages
@@ -455,37 +441,46 @@ export default function ChatPage() {
     });
   };
 
+  const onToggleMember = (id: number, checked: boolean) => {
+    setGroupMembers((prev) =>
+      checked ? [...prev, id] : prev.filter((m) => m !== id)
+    );
+  };
+
   const handleCreateGroup = () => {
-    if (!groupName.trim() || groupMembers.length < 2 || !currentUser) return;
+    console.log("Creating group with members:", groupMembers);
+    // Filter out duplicates and ensure only checked members are used
+    const uniqueMembers = [...new Set(groupMembers)];
+
+    // Validation: must have group name and at least 2 total (current user + 1 more)
+    if (!groupName.trim() || uniqueMembers.length < 1 || !currentUser) {
+      alert("Please enter a group name and select at least one member.");
+      return;
+    }
+
     const newGroup = {
       name: groupName.trim(),
-      members: [currentUser.id, ...groupMembers],
+      members: [currentUser.id, ...uniqueMembers],
     };
+
+    console.log("Creating group:", newGroup); // ✅ Debug
+
     socketRef.current?.emit("createGroup", newGroup);
+
+    // Reset modal state
     setGroupName("");
     setGroupMembers([]);
     setShowGroupModal(false);
   };
+
   useEffect(() => {
     const fetchContacts = async () => {
       try {
         // const selectedIp = user?.sup_admin_selected_ip;
         const selectedIp = user?.sup_admin_selected_ip || user?.user_ip;
-        // console.log("------------- LINE 474 --------------");
-        // console.log(selectedIp);
 
         if (selectedIp) {
-          console.log("-------- line 478 ---------");
           const { data: allContacts } = await getContacts(selectedIp);
-
-          // console.log(users);
-
-          // const contactIds = new Set(allContacts.map((c: User) => c.id));
-          // setUsers((prevUsers) =>
-          //   prevUsers.filter((u: User) => !contactIds.has(u.id))
-          // );
-
-          // console.log(users);
 
           setContacts(() => {
             const excludeIds = [
@@ -685,9 +680,6 @@ export default function ChatPage() {
   // render
   if (!currentUser) return <div>Loading...</div>;
 
-  // console.log("------------- LINE 540 ------------");
-  // console.log(requestsReceived);
-  // console.log(requestsSent);
   return (
     <div className="flex h-screen bg-blue-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* LEFT */}
@@ -718,11 +710,11 @@ export default function ChatPage() {
         messages={messages}
         users={users}
         newMessage={newMessage}
-        onSendDirect={sendDirect}
-        onSendGroup={sendGroup}
+        onSend={handleSend}
         onFileChange={handleFileChange}
-        onAttachClick={handleAttachClick}
         onMessageChange={setNewMessage}
+        selectedFile={selectedFile}
+        onClearFile={() => setSelectedFile(null)} // ✅ this resets file correctly
       />
 
       {/* RIGHT */}
@@ -746,11 +738,7 @@ export default function ChatPage() {
           onClose={() => setShowGroupModal(false)}
           onCreate={handleCreateGroup}
           onGroupNameChange={setGroupName}
-          onToggleMember={(id, checked) =>
-            setGroupMembers((prev) =>
-              checked ? [...prev, id] : prev.filter((m) => m !== id)
-            )
-          }
+          onToggleMember={onToggleMember}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 // lib/socket.ts
-import { io, Socket as SocketClient } from "socket.io-client";
+import io from "socket.io-client";
 import { Message } from "@/app/chat/types";
 import { User } from "@/app/types/user";
 
@@ -39,31 +39,39 @@ export interface ClientToServerEvents {
 // ---------------------------
 // Socket instance - initialized only on client side
 // ---------------------------
-let socket: SocketClient<ServerToClientEvents, ClientToServerEvents> | null =
-  null;
+export interface MinimalSocket {
+  on: (...args: unknown[]) => unknown;
+  off: (...args: unknown[]) => unknown;
+  emit: (...args: unknown[]) => unknown;
+  id?: string;
+  connected?: boolean;
+}
 
-export const getSocket = (): SocketClient<
-  ServerToClientEvents,
-  ClientToServerEvents
-> | null => {
-  if (typeof window === "undefined") {
-    // Return null for SSR - socket should not be used during server-side rendering
-    return null;
-  }
+let socket: MinimalSocket | null = null;
+
+// ---------------------------
+// Get socket instance (singleton)
+// ---------------------------
+export const getSocket = (): MinimalSocket | null => {
+  // Prevent using socket during SSR
+  if (typeof window === "undefined") return null;
 
   if (!socket) {
-    socket = io(process.env.NEXT_PUBLIC_API_URL, {
+    socket = io(process.env.NEXT_PUBLIC_API_URL as string, {
       transports: ["polling", "websocket"],
       autoConnect: true,
-      withCredentials: false,
-    });
+    }) as unknown as MinimalSocket;
 
     // ---------------------------
     // Debug connection events
     // ---------------------------
     socket.on("connect", () => console.log("✅ Socket connected:", socket?.id));
-    socket.on("connect_error", (err) => console.error("❌ Socket error:", err));
-    socket.on("disconnect", (reason) =>
+
+    socket.on("connect_error", (err: unknown) =>
+      console.error("❌ Socket error:", err)
+    );
+
+    socket.on("disconnect", (reason: unknown) =>
       console.warn("⚠️ Disconnected:", reason)
     );
   }
@@ -71,5 +79,5 @@ export const getSocket = (): SocketClient<
   return socket;
 };
 
-// Export socket for backward compatibility (but use getSocket() instead)
+// Optional backward-compatible export
 export { getSocket as socket };
