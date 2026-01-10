@@ -132,6 +132,7 @@ interface DashboardData {
   totalBlockedIps: string;
   totalMessageForTheDay: string;
   totalUsers: string;
+  activeActivities: [];
 }
 
 // Dashboard Page
@@ -165,6 +166,7 @@ export default function Dashboard() {
     totalBlockedIps,
     totalMessageForTheDay,
     totalUsers,
+    activeActivities,
   } = data;
 
   return (

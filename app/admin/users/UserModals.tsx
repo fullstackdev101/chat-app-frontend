@@ -134,6 +134,7 @@ export default function UserModals({
 
               <input
                 type="text"
+                disabled={!!editingUser} // 👈 disable when edit mode
                 placeholder="Username *"
                 value={form.username}
                 onChange={(e) => handleInputChange("username", e.target.value)}

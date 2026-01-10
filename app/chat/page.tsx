@@ -103,7 +103,7 @@ export default function ChatPage() {
 
           const me: User = {
             ...chosen,
-            name: `${chosen.name} (${user ? user.office_location : ""})`,
+            name: `${chosen.name} (${user ? user.role_name : ""})`,
           };
           setCurrentUser(me);
           currentUserIdRef.current = chosen.id;
