@@ -193,17 +193,12 @@ export default function UserModals({
                   handleInputChange("role_id", Number(e.target.value))
                 }
                 disabled={form.role_id === 1 && !!editingUser} // 👈 disable when role_id is 1
-                className={`p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400 ${
-                  form.role_id === 1 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`p-2 rounded-md bg-white text-gray-900 border border-white/20 focus:ring-1 focus:ring-sky-400 ${form.role_id === 1 ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
               >
-                {(user?.role_id === 1 ? USER_ROLES : ADMIN_USER_ROLES).map(
-                  (r) => (
-                    <option key={r.role_id} value={r.role_id}>
-                      {r.role}
-                    </option>
-                  )
-                )}
+                {/* Only show Admin (2) and Agent (3) */}
+                <option value="2" className="bg-white text-gray-900">Admin</option>
+                <option value="3" className="bg-white text-gray-900">Agent</option>
               </select>
 
               <select
@@ -214,11 +209,11 @@ export default function UserModals({
                     e.target.value as "active" | "inactive" | "blocked"
                   )
                 }
-                className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
+                className="p-2 rounded-md bg-white text-gray-900 border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="blocked">Blocked</option> {/* 🔧 added */}
+                <option value="active" className="bg-white text-gray-900">Active</option>
+                <option value="inactive" className="bg-white text-gray-900">Inactive</option>
+                <option value="blocked" className="bg-white text-gray-900">Blocked</option> {/* 🔧 added */}
               </select>
 
               <select
@@ -229,12 +224,12 @@ export default function UserModals({
                     e.target.value as "online" | "offline" | "busy" | "away" // 🔧 cast
                   )
                 }
-                className="p-2 rounded-md bg-black/20 text-white border border-white/20 focus:ring-1 focus:ring-sky-400"
+                className="p-2 rounded-md bg-white text-gray-900 border border-white/20 focus:ring-1 focus:ring-sky-400"
               >
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="busy">Busy</option>
-                <option value="away">Away</option>
+                <option value="online" className="bg-white text-gray-900">Online</option>
+                <option value="offline" className="bg-white text-gray-900">Offline</option>
+                <option value="busy" className="bg-white text-gray-900">Busy</option>
+                <option value="away" className="bg-white text-gray-900">Away</option>
               </select>
 
               <button

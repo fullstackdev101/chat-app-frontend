@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Home,
+  UserCheck,
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useAuthStore } from "../store/authStore";
@@ -25,6 +26,7 @@ const menuItems = [
   { name: "Users", href: "/admin/users", icon: Users },
   // { name: "Groups", href: "/admin/groups", icon: UserPlus },
   { name: "IP Restrictions", href: "/admin/ip-restrictions", icon: Shield },
+  { name: "Connection Requests", href: "/admin/connection-requests", icon: UserCheck },
   { name: "Messages Tracker", href: "/admin/messages-tracker", icon: Settings },
   // {
   //   name: "Messages Tracking",
@@ -42,8 +44,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const filteredMenuItems =
     user?.role_id !== 1
       ? menuItems.filter(
-          (item) => item.name === "Dashboard" || item.name === "Users"
-        )
+        (item) => item.name === "Dashboard" || item.name === "Users"
+      )
       : menuItems;
 
   const handleLogout = () => {
@@ -89,11 +91,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
+                className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
                     ? "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 text-white shadow-md"
                     : "text-white/80 hover:bg-white/10 hover:text-white"
-                }`}
+                  }`}
               >
                 <item.icon className="mr-3 h-5 w-5" />
                 {item.name}

@@ -17,7 +17,9 @@ export interface User {
   created_at: string;
   updated_at: string;
   role_name?: string;
-  office_location?: string;
+  office_location?: string | null;
+  ip_address?: string | null;
+  ip_id?: number | null;
 }
 
 // Default user object

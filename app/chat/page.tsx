@@ -391,9 +391,9 @@ export default function ChatPage() {
       ...(selectedGroup ? { group_id: selectedGroup.id } : {}),
       ...(uploadedFileData.fileUrl
         ? {
-            file_url: uploadedFileData.fileUrl,
-            file_name: uploadedFileData.fileName,
-          }
+          file_url: uploadedFileData.fileUrl,
+          file_name: uploadedFileData.fileName,
+        }
         : {}),
     };
 
@@ -604,12 +604,9 @@ export default function ChatPage() {
 
       switch (data.action) {
         case "send":
-          if (user && data.to_user_id === user.id) {
-            const contact = contacts.find((c) => c.id === data.from_user_id);
-            if (contact) {
-              setRequestsReceived((prev) => [...prev, contact]);
-            }
-          } else if (user && data.from_user_id === user.id) {
+          // Only update sender's "Requests Sent" list
+          // Recipient will see it ONLY after admin approves (via connection_request_received event)
+          if (user && data.from_user_id === user.id) {
             const contact = contacts.find((c) => c.id === data.to_user_id);
             if (contact) {
               setRequestsSent((prev) => [...prev, contact]);
@@ -668,10 +665,42 @@ export default function ChatPage() {
     };
 
     socket.on("users_connections:update", handleConnectionChange);
+
+    // ✅ NEW: Listen for admin-approved requests
+    socket.on("connection_request_received", (data: any) => {
+      console.log("🔔 [Frontend] Received connection_request_received event:", data);
+      console.log("🔔 [Frontend] Current user ID:", user?.id);
+      console.log("🔔 [Frontend] From user:", data.from_user);
+
+      if (user && data.from_user) {
+        // Find the user in contacts
+        const contact = contacts.find((c) => c.id === data.from_user.id);
+        console.log("🔍 [Frontend] Found contact in list:", contact);
+
+        if (contact) {
+          // Add to requests received
+          setRequestsReceived((prev) => {
+            // Avoid duplicates
+            if (prev.find((r) => r.id === contact.id)) {
+              console.log("⚠️ [Frontend] Request already exists, skipping");
+              return prev;
+            }
+            console.log("✅ [Frontend] Adding request to requestsReceived");
+            return [...prev, contact];
+          });
+        } else {
+          console.error("❌ [Frontend] Contact not found in contacts list!");
+        }
+      } else {
+        console.error("❌ [Frontend] Missing user or from_user data");
+      }
+    });
+
     return () => {
       const socket = getSocket();
       if (socket) {
         socket.off("users_connections:update", handleConnectionChange);
+        socket.off("connection_request_received");
       }
     };
   }, [contacts, requestsReceived, requestsSent, user, user?.id]); // ✅ only depends on contacts + user id

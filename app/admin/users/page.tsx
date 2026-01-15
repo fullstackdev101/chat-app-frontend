@@ -39,6 +39,14 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    role: "all",
+    status: "all",
+    location: "all",
+    hasIp: "all", // all | assigned | unassigned
+  });
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role_id === 1;
@@ -106,12 +114,61 @@ export default function UsersPage() {
 
   const userList = Object.values(users).flat();
 
-  const filteredUsers = userList.filter(
+  // Apply search filter
+  let filteredUsers = userList.filter(
     (u) =>
       (u.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (u.username ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (u.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
+
+  // Apply role filter
+  if (filters.role !== "all") {
+    filteredUsers = filteredUsers.filter(
+      (u) => u.role_id === Number(filters.role)
+    );
+  }
+
+  // Apply status filter
+  if (filters.status !== "all") {
+    filteredUsers = filteredUsers.filter(
+      (u) => u.account_status === filters.status
+    );
+  }
+
+  // Apply location filter
+  if (filters.location !== "all") {
+    filteredUsers = filteredUsers.filter(
+      (u) => u.office_location === filters.location
+    );
+  }
+
+  // Apply IP assignment filter
+  if (filters.hasIp === "assigned") {
+    filteredUsers = filteredUsers.filter((u) => u.office_location);
+  } else if (filters.hasIp === "unassigned") {
+    filteredUsers = filteredUsers.filter((u) => !u.office_location);
+  }
+
+  // Apply sorting
+  filteredUsers.sort((a, b) => {
+    let aVal: any = a[sortBy as keyof User];
+    let bVal: any = b[sortBy as keyof User];
+
+    // Handle null/undefined
+    if (aVal == null) aVal = "";
+    if (bVal == null) bVal = "";
+
+    // Convert to string for comparison
+    aVal = String(aVal).toLowerCase();
+    bVal = String(bVal).toLowerCase();
+
+    if (sortOrder === "asc") {
+      return aVal > bVal ? 1 : -1;
+    } else {
+      return aVal < bVal ? 1 : -1;
+    }
+  });
 
   const totalPages = Math.ceil(filteredUsers.length / recordsPerPage);
   const currentUsers = filteredUsers.slice(
@@ -147,6 +204,22 @@ export default function UsersPage() {
     setViewModalOpen(true);
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle sort order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortBy !== column) return null;
+    return sortOrder === "asc" ? " ↑" : " ↓";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
@@ -164,7 +237,7 @@ export default function UsersPage() {
             User Management
           </h1>
           <p className="text-white/70 text-sm mt-1">
-            Total Users: {users.length}
+            Total Users: {users.length} | Filtered: {filteredUsers.length}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -188,34 +261,122 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 mb-4 border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className="text-white/70 text-xs mb-1 block">Role</label>
+            <select
+              value={filters.role}
+              onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+              className="w-full bg-white text-gray-900 border border-white/20 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-400"
+            >
+              <option value="all" className="bg-white text-gray-900">All Roles</option>
+              <option value="2" className="bg-white text-gray-900">Admin</option>
+              <option value="3" className="bg-white text-gray-900">Agent</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-white/70 text-xs mb-1 block">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="w-full bg-white text-gray-900 border border-white/20 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-400"
+            >
+              <option value="all" className="bg-white text-gray-900">All Status</option>
+              <option value="active" className="bg-white text-gray-900">Active</option>
+              <option value="inactive" className="bg-white text-gray-900">Inactive</option>
+              <option value="blocked" className="bg-white text-gray-900">Blocked</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-white/70 text-xs mb-1 block">IP Assignment</label>
+            <select
+              value={filters.hasIp}
+              onChange={(e) => setFilters({ ...filters, hasIp: e.target.value })}
+              className="w-full bg-white text-gray-900 border border-white/20 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-400"
+            >
+              <option value="all" className="bg-white text-gray-900">All Users</option>
+              <option value="assigned" className="bg-white text-gray-900">IP Assigned</option>
+              <option value="unassigned" className="bg-white text-gray-900">No IP</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-white/70 text-xs mb-1 block">Actions</label>
+            <button
+              onClick={() => {
+                setSearch("");
+                setFilters({ role: "all", status: "all", location: "all", hasIp: "all" });
+              }}
+              className="w-full bg-white/10 text-white border border-white/20 rounded-lg px-3 py-2 text-sm hover:bg-white/20 transition"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
         <table className="min-w-full text-left divide-y divide-white/30">
           <thead className="bg-white/10">
             <tr>
-              <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Name
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("name")}
+              >
+                Name<SortIcon column="name" />
               </th>
-              <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Username
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("username")}
+              >
+                Username<SortIcon column="username" />
               </th>
-              <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Email
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("email")}
+              >
+                Email<SortIcon column="email" />
               </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80">
                 Phone
               </th>
-              <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Role
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("role_name")}
+              >
+                Role<SortIcon column="role_name" />
               </th>
-              <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Account Status
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("account_status")}
+              >
+                Account Status<SortIcon column="account_status" />
               </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80">
                 Presence
               </th>
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("office_location")}
+              >
+                Location<SortIcon column="office_location" />
+              </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80">
-                Location
+                IP Address
+              </th>
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("created_at")}
+              >
+                Created<SortIcon column="created_at" />
+              </th>
+              <th
+                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
+                onClick={() => handleSort("last_seen")}
+              >
+                Last Login<SortIcon column="last_seen" />
               </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80 text-right">
                 Actions
@@ -265,29 +426,41 @@ export default function UsersPage() {
                 <td className="px-4 py-1 text-white/90">
                   {user.office_location}
                 </td>
+                <td className="px-4 py-1 text-white/90 text-xs">
+                  {user.ip_address || "-"}
+                </td>
+                <td className="px-4 py-1 text-white/90 text-xs">
+                  {user.created_at
+                    ? new Date(user.created_at).toLocaleDateString()
+                    : "-"}
+                </td>
+                <td className="px-4 py-1 text-white/90 text-xs">
+                  {user.last_seen
+                    ? new Date(user.last_seen).toLocaleString()
+                    : "Never"}
+                </td>
                 <td className="px-4 py-1">
                   <div className="flex justify-end items-center gap-2 h-full">
                     <button
-                      className={`p-1 transition rounded ${
-                        user.office_location
-                          ? "text-green-400 cursor-not-allowed opacity-70"
-                          : isAdmin
-                          ? "text-white/80 hover:text-sky-300"
-                          : "text-gray-500 cursor-not-allowed opacity-50"
-                      }`}
+                      className={`p-1 transition rounded ${isAdmin
+                        ? user.office_location
+                          ? "text-yellow-400 hover:text-yellow-300"
+                          : "text-white/80 hover:text-sky-300"
+                        : "text-gray-500 cursor-not-allowed opacity-50"
+                        }`}
                       onClick={() => {
-                        if (isAdmin && !user.office_location) {
+                        if (isAdmin) {
                           openIpUserModal(user);
                         }
                       }}
                       title={
                         user.office_location
-                          ? `Location assigned : ${user.office_location}`
+                          ? `Reassign IP (Current: ${user.office_location})`
                           : isAdmin
-                          ? "Assign Location to user"
-                          : "Only Super Admin can assign location to the users"
+                            ? "Assign IP to user"
+                            : "Only Super Admin can assign IP to users"
                       }
-                      disabled={!!user.office_location || !isAdmin}
+                      disabled={!isAdmin}
                     >
                       {user.office_location ? (
                         <Shield size={16} /> // 🛡️ Assigned
@@ -337,11 +510,10 @@ export default function UsersPage() {
           <button
             key={i}
             onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded-xl text-white transition ${
-              currentPage === i + 1
-                ? "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shadow-md"
-                : "bg-white/20"
-            }`}
+            className={`px-3 py-1 rounded-xl text-white transition ${currentPage === i + 1
+              ? "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shadow-md"
+              : "bg-white/20"
+              }`}
           >
             {i + 1}
           </button>
@@ -363,9 +535,9 @@ export default function UsersPage() {
         editingUser={editingUser}
         setEditingUser={setEditingUser}
         viewingUser={viewingUser}
-        // form={form}
-        // handleInputChange={handleInputChange}
-        // handleSubmit={handleSubmit}
+      // form={form}
+      // handleInputChange={handleInputChange}
+      // handleSubmit={handleSubmit}
       />
 
       <UserIpModal

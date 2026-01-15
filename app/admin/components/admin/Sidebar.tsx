@@ -1,7 +1,7 @@
 // components/admin/Sidebar.tsx
 "use client";
 
-import { Users, MessageSquare, Shield } from "lucide-react";
+import { Users, MessageSquare, Shield, UserCheck } from "lucide-react";
 
 export default function Sidebar({
   current,
@@ -17,6 +17,11 @@ export default function Sidebar({
       label: "Chat Groups",
       icon: <MessageSquare className="h-5 w-5" />,
     },
+    {
+      id: "connection-requests",
+      label: "Connection Requests",
+      icon: <UserCheck className="h-5 w-5" />,
+    },
     { id: "ip", label: "IP Control", icon: <Shield className="h-5 w-5" /> },
   ];
 
@@ -30,11 +35,10 @@ export default function Sidebar({
           <li key={item.id}>
             <button
               onClick={() => setCurrent(item.id)}
-              className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition ${
-                current === item.id
+              className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition ${current === item.id
                   ? "bg-blue-500 text-white"
                   : "text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
-              }`}
+                }`}
             >
               {item.icon}
               {item.label}

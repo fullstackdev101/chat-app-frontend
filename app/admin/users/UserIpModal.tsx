@@ -99,8 +99,9 @@ export default function UserIpModal({
               >
                 Select IP Address
               </label>
-              <p className="text-xs text-amber-400 mb-2">
-                ⚠️ Once an IP is assigned, it cannot be changed later.
+              <p className="text-xs text-sky-400 mb-2">
+                📍 {editingUser.name} {/* Show current assignment if exists */}
+                {/* We'll need to pass current IP info to show it here */}
               </p>
               <select
                 id="ip-select"
