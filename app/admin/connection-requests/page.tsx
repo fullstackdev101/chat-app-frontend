@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle, XCircle, RotateCcw, Users } from "lucide-react";
 import apiClient from "@/services/apiClient";
-import { io, Socket } from "socket.io-client";
+import io from "socket.io-client";
 
 interface ConnectionRequest {
     id: number;
@@ -45,15 +45,12 @@ export default function ConnectionRequestsPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
-    const [socket, setSocket] = useState<Socket | null>(null);
-
     // Initialize Socket.IO connection
     useEffect(() => {
-        const socketInstance = io("http://localhost:4000");
-        setSocket(socketInstance);
+        const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000");
 
         // Listen for new connection requests
-        socketInstance.on("admin_new_connection_request", (data) => {
+        socketInstance.on("admin_new_connection_request", (data: unknown) => {
             console.log("New connection request received:", data);
             // Refresh stats and requests if on pending tab
             fetchStats();
@@ -63,14 +60,14 @@ export default function ConnectionRequestsPage() {
         });
 
         // Listen for approval events (to update stats)
-        socketInstance.on("connection_request_approved", (data) => {
+        socketInstance.on("connection_request_approved", (data: unknown) => {
             console.log("Request approved:", data);
             fetchStats();
             fetchRequests(pagination?.page || 1);
         });
 
         // Listen for rejection events
-        socketInstance.on("connection_request_rejected", (data) => {
+        socketInstance.on("connection_request_rejected", (data: unknown) => {
             console.log("Request rejected:", data);
             fetchStats();
             fetchRequests(pagination?.page || 1);
@@ -79,6 +76,7 @@ export default function ConnectionRequestsPage() {
         return () => {
             socketInstance.disconnect();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch statistics
@@ -171,6 +169,7 @@ export default function ConnectionRequestsPage() {
     useEffect(() => {
         fetchRequests();
         fetchStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const formatDate = (dateString: string) => {

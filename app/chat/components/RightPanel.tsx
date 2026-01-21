@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 
 type Request = { id: number; name: string };
 
@@ -10,6 +11,7 @@ interface RightPanelProps {
   onReject: (id: number) => void;
   onDeleteSent: (id: number) => void;
   onSendRequest: (id: number) => void;
+  onLogout: () => void;
 }
 
 export default function RightPanel({
@@ -20,6 +22,7 @@ export default function RightPanel({
   onReject,
   onDeleteSent,
   onSendRequest,
+  onLogout,
 }: RightPanelProps) {
   const [search, setSearch] = useState("");
   // console.log("---------RIGHT PANEL ---------");
@@ -29,110 +32,124 @@ export default function RightPanel({
   const filteredContacts =
     search.trim().length > 0
       ? contacts.filter(
-          (c) => c?.name && c.name.toLowerCase().includes(search.toLowerCase())
-        )
+        (c) => c?.name && c.name.toLowerCase().includes(search.toLowerCase())
+      )
       : [];
 
   return (
-    <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 space-y-6">
-      {/* Requests Received Section */}
-      <div>
-        <div className="text-lg font-semibold mb-3">
-          Requests Received ({requestsReceived.length})
-        </div>
-        {requestsReceived.length > 0 ? (
-          <div className="space-y-3">
-            {requestsReceived.map((req) => (
-              <div
-                key={req.id}
-                className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
-              >
-                <span className="text-sm font-medium">{req.name}</span>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => onAccept(req.id)}
-                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => onReject(req.id)}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
-            ))}
+    <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col h-full">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Requests Received Section */}
+        <div>
+          <div className="text-lg font-semibold mb-3">
+            Requests Received ({requestsReceived.length})
           </div>
-        ) : (
-          <p className="text-xs text-gray-400">No requests received</p>
-        )}
-      </div>
-
-      {/* Requests Sent Section */}
-      <div>
-        <div className="text-lg font-semibold mb-3">
-          Requests Sent ({requestsSent.length})
-        </div>
-        {requestsSent.length > 0 ? (
-          <div className="space-y-3">
-            {requestsSent.map((req) => (
-              <div
-                key={req.id}
-                className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
-              >
-                <span className="text-sm font-medium">{req.name}</span>
-                <button
-                  onClick={() => onDeleteSent(req.id)}
-                  className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+          {requestsReceived.length > 0 ? (
+            <div className="space-y-3">
+              {requestsReceived.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
                 >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400">No requests sent</p>
-        )}
-      </div>
-
-      {/* Contact Search Section */}
-      <div>
-        <div className="text-lg font-semibold mb-3">Search Contacts</div>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search contact..."
-          className="w-full px-3 py-2 mb-3 text-sm border rounded dark:bg-gray-800 dark:border-gray-700"
-        />
-
-        {/* Only show results if something is typed */}
-        {search.trim().length > 0 && (
-          <>
-            {filteredContacts.length > 0 ? (
-              <div className="space-y-3">
-                {filteredContacts.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
-                  >
-                    <span className="text-sm font-medium">{c.name}</span>
+                  <span className="text-sm font-medium">{req.name}</span>
+                  <div className="flex space-x-2">
                     <button
-                      onClick={() => onSendRequest(c.id)}
-                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      onClick={() => onAccept(req.id)}
+                      className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                     >
-                      Send Request
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => onReject(req.id)}
+                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                      Reject
                     </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">No contacts found</p>
-            )}
-          </>
-        )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">No requests received</p>
+          )}
+        </div>
+
+        {/* Requests Sent Section */}
+        <div>
+          <div className="text-lg font-semibold mb-3">
+            Requests Sent ({requestsSent.length})
+          </div>
+          {requestsSent.length > 0 ? (
+            <div className="space-y-3">
+              {requestsSent.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
+                >
+                  <span className="text-sm font-medium">{req.name}</span>
+                  <button
+                    onClick={() => onDeleteSent(req.id)}
+                    className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">No requests sent</p>
+          )}
+        </div>
+
+        {/* Contact Search Section */}
+        <div>
+          <div className="text-lg font-semibold mb-3">Search Contacts</div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search contact..."
+            className="w-full px-3 py-2 mb-3 text-sm border rounded dark:bg-gray-800 dark:border-gray-700"
+          />
+
+          {/* Only show results if something is typed */}
+          {search.trim().length > 0 && (
+            <>
+              {filteredContacts.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredContacts.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between border p-2 rounded-lg dark:border-gray-700"
+                    >
+                      <span className="text-sm font-medium">{c.name}</span>
+                      <button
+                        onClick={() => onSendRequest(c.id)}
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Send Request
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">No contacts found</p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Footer with Logout Button */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-medium"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Logout</span>
+        </button>
       </div>
     </div>
   );

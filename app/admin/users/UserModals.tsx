@@ -4,8 +4,6 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { User, defaultUser } from "../../types/user"; // <-- defaultUser defined in types
 import { createUser, updateUser } from "../../../services/authService";
-import { USER_ROLES, ADMIN_USER_ROLES } from "../../../lib/constants";
-import { useAuthStore } from "../../store/authStore";
 
 interface UserModalsProps {
   modalOpen: boolean;
@@ -26,7 +24,7 @@ export default function UserModals({
   setEditingUser,
   viewingUser,
 }: UserModalsProps) {
-  const user = useAuthStore((state) => state.user);
+
 
   // ✅ Always have all fields
   const [form, setForm] = useState<User>(defaultUser);

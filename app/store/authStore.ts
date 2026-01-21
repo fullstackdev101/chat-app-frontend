@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { devtools, persist } from "zustand/middleware";
+import { clearAuth, getToken, isTokenExpired } from "@/lib/auth";
 
 interface User {
   id: number;
@@ -20,23 +21,56 @@ interface AuthState {
   setUser: (user: User) => void;
   updateUser: (partialUser: Partial<User>) => void;
   clearUser: () => void;
+  logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
-  devtools((set) => ({
-    user: null,
+  devtools(
+    persist(
+      (set) => ({
+        user: null,
 
-    setUser: (user) => set({ user }, false, "auth/setUser"),
+        setUser: (user) => set({ user }, false, "auth/setUser"),
 
-    updateUser: (partialUser) =>
-      set(
-        (state) => ({
-          user: state.user ? { ...state.user, ...partialUser } : null,
-        }),
-        false,
-        "auth/updateUser"
-      ),
+        updateUser: (partialUser) =>
+          set(
+            (state) => ({
+              user: state.user ? { ...state.user, ...partialUser } : null,
+            }),
+            false,
+            "auth/updateUser"
+          ),
 
-    clearUser: () => set({ user: null }, false, "auth/clearUser"),
-  }))
+        clearUser: () => set({ user: null }, false, "auth/clearUser"),
+
+        logout: () => {
+          console.log('🚪 Logging out...');
+          clearAuth();
+          set({ user: null }, false, "auth/logout");
+          // Force redirect to login
+          if (typeof window !== 'undefined') {
+            window.location.replace('/login');
+          }
+        },
+      }),
+      {
+        name: "auth-storage",
+        partialize: (state) => ({ user: state.user }),
+        // Validate token when rehydrating from localStorage
+        onRehydrateStorage: () => (state) => {
+          if (state?.user) {
+            const token = getToken();
+            // If no token or token is expired, clear the cached user
+            if (!token || isTokenExpired(token)) {
+              console.log("⚠️ Cached user data found but token is invalid, clearing...");
+              clearAuth();
+              state.clearUser();
+            } else {
+              console.log("✅ Valid token found, user data restored");
+            }
+          }
+        },
+      }
+    )
+  )
 );

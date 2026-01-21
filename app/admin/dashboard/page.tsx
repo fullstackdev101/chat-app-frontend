@@ -166,7 +166,6 @@ export default function Dashboard() {
     totalBlockedIps,
     totalMessageForTheDay,
     totalUsers,
-    activeActivities,
   } = data;
 
   return (

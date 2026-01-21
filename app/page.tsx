@@ -34,6 +34,12 @@ export default function Home() {
     let mounted = true;
 
     const fetchLocations = async () => {
+      // Verify user is authenticated (ProtectedLayout should handle this, but double-check)
+      if (!user) {
+        console.log("⚠️ No user found in store, waiting for auth...");
+        return;
+      }
+
       try {
         const data = await getAllowedIpAddresses();
         if (!mounted) return;
@@ -88,10 +94,9 @@ export default function Home() {
             onChange={handleLocationChange}
             disabled={roleId !== 1}
             className={`w-full appearance-none rounded-lg px-4 py-3 text-gray-200 border border-white/10 focus:outline-none transition-all duration-200
-              ${
-                roleId === 1
-                  ? "bg-gray-800/60 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer"
-                  : "bg-gray-700/40 cursor-not-allowed opacity-70"
+              ${roleId === 1
+                ? "bg-gray-800/60 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer"
+                : "bg-gray-700/40 cursor-not-allowed opacity-70"
               }`}
           >
             {roleId === 1 && <option value="">Select a location</option>}
@@ -119,10 +124,9 @@ export default function Home() {
             onClick={goToChat}
             disabled={roleId === 1 && !selectedLocation}
             className={`w-full px-6 py-3 text-base font-medium rounded-lg transition-all duration-300 shadow-md 
-              ${
-                roleId !== 1 || selectedLocation
-                  ? "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg text-white"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              ${roleId !== 1 || selectedLocation
+                ? "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg text-white"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
               }`}
           >
             Go to Chat
@@ -132,10 +136,9 @@ export default function Home() {
             onClick={goToAdmin}
             disabled={roleId === 1 && !selectedLocation}
             className={`w-full px-6 py-3 text-base font-medium rounded-lg transition-all duration-300 shadow-md 
-              ${
-                roleId !== 1 || selectedLocation
-                  ? "bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg text-white"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              ${roleId !== 1 || selectedLocation
+                ? "bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg text-white"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
               }`}
           >
             Go to Admin Dashboard

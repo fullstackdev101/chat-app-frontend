@@ -152,8 +152,8 @@ export default function UsersPage() {
 
   // Apply sorting
   filteredUsers.sort((a, b) => {
-    let aVal: any = a[sortBy as keyof User];
-    let bVal: any = b[sortBy as keyof User];
+    let aVal: string | number | null | undefined = a[sortBy as keyof User];
+    let bVal: string | number | null | undefined = b[sortBy as keyof User];
 
     // Handle null/undefined
     if (aVal == null) aVal = "";
@@ -366,18 +366,6 @@ export default function UsersPage() {
               <th className="px-4 py-2 text-sm font-semibold text-white/80">
                 IP Address
               </th>
-              <th
-                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
-                onClick={() => handleSort("created_at")}
-              >
-                Created<SortIcon column="created_at" />
-              </th>
-              <th
-                className="px-4 py-2 text-sm font-semibold text-white/80 cursor-pointer hover:text-white"
-                onClick={() => handleSort("last_seen")}
-              >
-                Last Login<SortIcon column="last_seen" />
-              </th>
               <th className="px-4 py-2 text-sm font-semibold text-white/80 text-right">
                 Actions
               </th>
@@ -428,16 +416,6 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 py-1 text-white/90 text-xs">
                   {user.ip_address || "-"}
-                </td>
-                <td className="px-4 py-1 text-white/90 text-xs">
-                  {user.created_at
-                    ? new Date(user.created_at).toLocaleDateString()
-                    : "-"}
-                </td>
-                <td className="px-4 py-1 text-white/90 text-xs">
-                  {user.last_seen
-                    ? new Date(user.last_seen).toLocaleString()
-                    : "Never"}
                 </td>
                 <td className="px-4 py-1">
                   <div className="flex justify-end items-center gap-2 h-full">

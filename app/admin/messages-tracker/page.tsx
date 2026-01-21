@@ -183,9 +183,10 @@ export default function MessagesTrackerPage() {
       }
 
       alert(`${conv.type === "direct" ? "Conversation" : "Group"} deleted successfully!`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error deleting conversation:", err);
-      alert(`Failed to delete ${conv.type === "direct" ? "conversation" : "group"}: ${err.response?.data?.error || err.message}`);
+      const errorMessage = err instanceof Error ? err.message : (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Unknown error";
+      alert(`Failed to delete ${conv.type === "direct" ? "conversation" : "group"}: ${errorMessage}`);
     }
   };
 
@@ -202,9 +203,10 @@ export default function MessagesTrackerPage() {
       setMessages(prev => prev.filter(m => m.id !== messageId));
 
       alert("Message deleted successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error deleting message:", err);
-      alert(`Failed to delete message: ${err.response?.data?.error || err.message}`);
+      const errorMessage = err instanceof Error ? err.message : (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Unknown error";
+      alert(`Failed to delete message: ${errorMessage}`);
     }
   };
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, User, Lock } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { login } from "@/services/authService";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,9 +26,11 @@ export default function LoginPage() {
     try {
       const user = await login(username, password);
 
+      // Store token in localStorage
       localStorage.setItem("token", user.token);
 
-      // console.log(user);
+      // Also store in cookie for middleware access (12 hours to match JWT expiration)
+      document.cookie = `token=${user.token}; path=/; max-age=${60 * 60 * 12}`; // 12 hours
 
       setUser(user);
       if (user.role_id === 3) {

@@ -5,7 +5,7 @@ const nextConfig = {
     return [
       {
         source: "/uploads/:path*", // what frontend requests
-        destination: "http://localhost:4000/uploads/:path*", // where to forward
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/uploads/:path*`, // where to forward
       },
     ];
   },

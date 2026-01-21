@@ -531,7 +531,9 @@ export default function ChatPage() {
     const rejected = requestsReceived.find((r) => r.id === id);
     if (!rejected) return;
 
-    // setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+    // Remove from UI immediately
+    setRequestsReceived((prev) => prev.filter((r) => r.id !== id));
+
     if (!user) return; // exit if not logged in
 
     const socket = getSocket();
@@ -667,30 +669,24 @@ export default function ChatPage() {
     socket.on("users_connections:update", handleConnectionChange);
 
     // ✅ NEW: Listen for admin-approved requests
-    socket.on("connection_request_received", (data: any) => {
+    socket.on("connection_request_received", (data: { from_user?: User }) => {
       console.log("🔔 [Frontend] Received connection_request_received event:", data);
       console.log("🔔 [Frontend] Current user ID:", user?.id);
       console.log("🔔 [Frontend] From user:", data.from_user);
 
       if (user && data.from_user) {
-        // Find the user in contacts
-        const contact = contacts.find((c) => c.id === data.from_user.id);
-        console.log("🔍 [Frontend] Found contact in list:", contact);
+        const fromUser = data.from_user; // Type narrowing
 
-        if (contact) {
-          // Add to requests received
-          setRequestsReceived((prev) => {
-            // Avoid duplicates
-            if (prev.find((r) => r.id === contact.id)) {
-              console.log("⚠️ [Frontend] Request already exists, skipping");
-              return prev;
-            }
-            console.log("✅ [Frontend] Adding request to requestsReceived");
-            return [...prev, contact];
-          });
-        } else {
-          console.error("❌ [Frontend] Contact not found in contacts list!");
-        }
+        // Add to requests received (sender doesn't need to be in contacts yet)
+        setRequestsReceived((prev) => {
+          // Avoid duplicates
+          if (prev.find((r) => r.id === fromUser.id)) {
+            console.log("⚠️ [Frontend] Request already exists, skipping");
+            return prev;
+          }
+          console.log("✅ [Frontend] Adding request to requestsReceived");
+          return [...prev, fromUser];
+        });
       } else {
         console.error("❌ [Frontend] Missing user or from_user data");
       }
@@ -755,6 +751,7 @@ export default function ChatPage() {
         onReject={handleReject}
         onDeleteSent={handleDeleteSent}
         onSendRequest={handleSendRequest}
+        onLogout={handleLogout}
       />
 
       {/* MODAL */}
