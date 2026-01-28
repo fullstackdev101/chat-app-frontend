@@ -43,6 +43,7 @@ export default function ChatPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   // console.log("sup_admin_selected_ip:   " + user?.sup_admin_selected_ip);
   const router = useRouter();
 
@@ -104,6 +105,7 @@ export default function ChatPage() {
           const me: User = {
             ...chosen,
             name: `${chosen.name} (${user ? user.role_name : ""})`,
+            user_ip: user?.user_ip, // Add IP from auth store
           };
           setCurrentUser(me);
           currentUserIdRef.current = chosen.id;
@@ -358,8 +360,7 @@ export default function ChatPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("demoUserId");
-    router.push("/login");
+    logout(); // This calls authStore.logout() which clears all session data
   };
 
   const goHome = () => router.push("/");

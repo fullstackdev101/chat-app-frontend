@@ -40,6 +40,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   const filteredMenuItems =
     user?.role_id !== 1
@@ -49,7 +50,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       : menuItems;
 
   const handleLogout = () => {
-    router.push("/login");
+    logout(); // This calls authStore.logout() which clears all session data
   };
 
   return (
@@ -92,8 +93,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                    ? "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 text-white shadow-md"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                  ? "bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 text-white shadow-md"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
               >
                 <item.icon className="mr-3 h-5 w-5" />

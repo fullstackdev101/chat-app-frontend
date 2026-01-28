@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, User, Lock } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { login } from "@/services/authService";
-import { isAuthenticated } from "@/lib/auth";
+
 
 export default function LoginPage() {
   const router = useRouter();

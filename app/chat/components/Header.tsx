@@ -19,7 +19,12 @@ export default function Header({ currentUser, onLogout, goHome }: HeaderProps) {
         <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">
           {currentUser.name.charAt(0)}
         </div>
-        <span className="truncate font-semibold">{currentUser.name}</span>
+        <div className="flex flex-col">
+          <span className="truncate font-semibold">{currentUser.name}</span>
+          <span className="text-xs text-blue-100">
+            IP: {currentUser.user_ip || 'N/A'}
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {/* Only show Home button for non-agents */}

@@ -20,6 +20,7 @@ export interface User {
   office_location?: string | null;
   ip_address?: string | null;
   ip_id?: number | null;
+  user_ip?: string; // IP address user is logged in from
 }
 
 // Default user object

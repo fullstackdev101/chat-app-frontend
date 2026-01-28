@@ -63,7 +63,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, [roleId, updateUser, userIpLocation, user?.sup_admin_selected_ip]);
+  }, [roleId, updateUser, userIpLocation, user?.sup_admin_selected_ip, user]);
 
   // ✅ Handle dropdown selection
   const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
