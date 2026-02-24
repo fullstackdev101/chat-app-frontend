@@ -199,7 +199,7 @@ export default function IpRestrictionsPage() {
                     <>
                       {/* Editable row */}
                       <td className="py-2 px-4">
-                        {/* <input
+                        <input
                           key={`ip-${entry.id}`}
                           type="text"
                           value={editForm.ip}
@@ -207,8 +207,8 @@ export default function IpRestrictionsPage() {
                             setEditForm({ ...editForm, ip: e.target.value })
                           }
                           className="w-full px-2 py-1 rounded border dark:bg-gray-800 dark:text-gray-100"
-                        /> */}
-                        {entry.ip}
+                        />
+                        {/* {entry.ip} */}
                       </td>
                       <td className="py-2 px-4">
                         <input
@@ -278,11 +278,10 @@ export default function IpRestrictionsPage() {
                       <td className="py-2 px-4">
                         <span
                           className={`px-3 py-1 text-sm font-medium rounded-full
-                ${
-                  entry.status === "allowed"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                }`}
+                ${entry.status === "allowed"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                              : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                            }`}
                         >
                           {entry.status}
                         </span>
@@ -304,11 +303,10 @@ export default function IpRestrictionsPage() {
                               ? "Global IP cannot be removed/deleted"
                               : "Remove this IP"
                           }
-                          className={`p-2 rounded-lg transition ${
-                            entry.id === 1
+                          className={`p-2 rounded-lg transition ${entry.id === 1
                               ? "bg-red-500/10 text-red-400 opacity-60 cursor-not-allowed"
                               : "bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white"
-                          }`}
+                            }`}
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
