@@ -47,7 +47,11 @@ export default function ConnectionRequestsPage() {
     const [actionLoading, setActionLoading] = useState<number | null>(null);
     // Initialize Socket.IO connection
     useEffect(() => {
-        const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000");
+        // ✅ SECURITY: Pass JWT token so backend middleware can authenticate
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000", {
+            auth: { token: token || "" },
+        });
 
         // Listen for new connection requests
         socketInstance.on("admin_new_connection_request", (data: unknown) => {

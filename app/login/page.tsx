@@ -26,11 +26,12 @@ export default function LoginPage() {
     try {
       const user = await login(username, password);
 
-      // Store token in localStorage
+      // Store token in localStorage for Authorization header use in API calls
       localStorage.setItem("token", user.token);
 
-      // Also store in cookie for middleware access (12 hours to match JWT expiration)
-      document.cookie = `token=${user.token}; path=/; max-age=${60 * 60 * 12}`; // 12 hours
+      // ✅ SECURITY: Do NOT set cookie via JavaScript - the backend now
+      // sets an HttpOnly, Secure cookie automatically in the login response.
+      // This prevents XSS from stealing the cookie.
 
       setUser(user);
       if (user.role_id === 3) {

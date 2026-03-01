@@ -378,9 +378,14 @@ export default function ChatPage() {
     if (selectedFile) {
       const formData = new FormData();
       formData.append("file", selectedFile);
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/chat/upload`,
-        { method: "POST", body: formData }
+        {
+          method: "POST",
+          body: formData,
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
       );
       uploadedFileData = await res.json();
     }

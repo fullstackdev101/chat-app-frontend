@@ -10,25 +10,6 @@ import UserIpModal from "./UserIpModal";
 import { getSocket } from "../../../lib/socket"; // ✅ import socket instance
 import { useAuthStore } from "../../store/authStore";
 
-export const defaultUser: User = {
-  id: 0,
-  name: "", // ✅ always string, never undefined
-  username: "",
-  email: "",
-  password: "",
-  role_id: 1,
-  phone_number: null,
-  notes: null,
-  created_by: null,
-  presence: "offline",
-  account_status: "active",
-  last_seen: new Date().toISOString(),
-  profile_image: null,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  role_name: "", // optional
-};
-
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);

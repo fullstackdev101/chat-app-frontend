@@ -17,8 +17,17 @@ export const login = async (username: string, password: string) => {
 // ----------------------------
 // LOGOUT
 // ----------------------------
-export const logout = () => {
+export const logout = async () => {
+  // Clear localStorage
   localStorage.removeItem("token");
+
+  // ✅ SECURITY: Call backend to clear the HttpOnly cookie
+  // Without this the HttpOnly cookie persists and the user stays authenticated!
+  try {
+    await apiClient.post("/logout");
+  } catch {
+    // Silently ignore — even if this fails, localStorage is cleared
+  }
 };
 
 // ----------------------------

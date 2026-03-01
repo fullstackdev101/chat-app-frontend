@@ -32,7 +32,7 @@ export interface ClientToServerEvents {
     from_user_id: number;
     to_user_id: number;
   }) => void;
-  register: (userId: number) => void;
+  register: () => void; // ✅ No longer sends userId — server gets it from JWT
   createGroup: (group: { name: string; members: number[] }) => void;
 }
 
@@ -51,20 +51,25 @@ let socket: MinimalSocket | null = null;
 
 // ---------------------------
 // Get socket instance (singleton)
+// ✅ SECURITY: Passes JWT token in handshake auth so server can verify identity
 // ---------------------------
 export const getSocket = (): MinimalSocket | null => {
   // Prevent using socket during SSR
   if (typeof window === "undefined") return null;
 
   if (!socket) {
+    // ✅ Get token from localStorage (still stored there for Authorization header use)
+    const token = localStorage.getItem("token");
+
     socket = io(process.env.NEXT_PUBLIC_API_URL as string, {
       transports: ["polling", "websocket"],
       autoConnect: true,
+      // ✅ SECURITY: Pass JWT token so socket server can authenticate this connection
+      auth: {
+        token: token || "",
+      },
     }) as unknown as MinimalSocket;
 
-    // ---------------------------
-    // Debug connection events
-    // ---------------------------
     socket.on("connect", () => console.log("✅ Socket connected:", socket?.id));
 
     socket.on("connect_error", (err: unknown) =>
@@ -77,6 +82,14 @@ export const getSocket = (): MinimalSocket | null => {
   }
 
   return socket;
+};
+
+// Disconnect and clear socket (call on logout)
+export const disconnectSocket = (): void => {
+  if (socket) {
+    (socket as MinimalSocket & { disconnect?: () => void }).disconnect?.();
+    socket = null;
+  }
 };
 
 // Optional backward-compatible export

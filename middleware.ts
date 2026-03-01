@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
-// This function can be marked `async` if using `await` inside
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Allow login page without authentication
@@ -10,53 +10,47 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // Get token from cookies or check localStorage (via headers)
+    // Get token from HttpOnly cookie (set by backend on login)
     const token = request.cookies.get('token')?.value;
 
     // If no token, redirect to login
     if (!token) {
-        console.log(`🔒 [Middleware] No token found, redirecting ${pathname} → /login`);
         const loginUrl = new URL('/login', request.url);
         return NextResponse.redirect(loginUrl);
     }
 
-    // Validate token expiration (decode JWT)
+    // ✅ SECURITY: Cryptographically verify JWT signature using jose
+    // This prevents forged JWTs from passing — unlike simple base64 decode
     try {
-        const payload = JSON.parse(
-            Buffer.from(token.split('.')[1], 'base64').toString()
-        );
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        await jwtVerify(token, secret);
 
-        const currentTime = Math.floor(Date.now() / 1000);
-
-        if (payload.exp && payload.exp < currentTime) {
-            console.log(`⏰ [Middleware] Token expired, redirecting ${pathname} → /login`);
-            const loginUrl = new URL('/login', request.url);
-            const response = NextResponse.redirect(loginUrl);
-            // Clear the expired token
-            response.cookies.delete('token');
-            return response;
-        }
+        // Token is valid and signature verified — allow access
+        return NextResponse.next();
     } catch (error) {
-        console.error('❌ [Middleware] Invalid token format:', error);
+        // Signature invalid, token expired, or malformed
         const loginUrl = new URL('/login', request.url);
         const response = NextResponse.redirect(loginUrl);
-        response.cookies.delete('token');
+        // Clear the invalid/expired cookie
+        response.cookies.set('token', '', {
+            httpOnly: true,
+            expires: new Date(0),
+            path: '/',
+            sameSite: 'strict',
+        });
         return response;
     }
-
-    // Token is valid, allow access
-    return NextResponse.next();
 }
 
 // Configure which routes to protect
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
+         * Match all request paths except for:
          * - api (API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
+         * - favicon.ico
          */
         '/((?!api|_next/static|_next/image|favicon.ico).*)',
     ],

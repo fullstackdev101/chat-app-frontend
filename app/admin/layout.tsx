@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Shield,
   Users,
@@ -37,7 +37,6 @@ const menuItems = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
